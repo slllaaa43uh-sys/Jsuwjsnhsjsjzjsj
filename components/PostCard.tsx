@@ -414,8 +414,6 @@ const PostCard: React.FC<PostCardProps> = ({ post, variant = 'feed', onDelete, o
         }
     }
     
-    // We do NOT clear commentToDelete here yet, so the modal stays open with the spinner
-    
     try {
         const token = localStorage.getItem('token');
         let url = '';
@@ -425,7 +423,6 @@ const PostCard: React.FC<PostCardProps> = ({ post, variant = 'feed', onDelete, o
         const response = await fetch(url, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
         
         if (response.ok) {
-            // Only remove from UI after success
             if (isReply && parentId) {
                 setComments(prev => prev.map(c => {
                     if (c._id === parentId) return { ...c, replies: c.replies?.filter(r => r._id !== targetId) };
@@ -435,7 +432,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, variant = 'feed', onDelete, o
                 setComments(prev => prev.filter(c => c._id !== targetId));
                 setCommentsCount(prev => Math.max(0, prev - 1));
             }
-            setCommentToDelete(null); // Close modal
+            setCommentToDelete(null); 
         } else {
             alert(t('delete_fail'));
             setCommentToDelete(null);
@@ -686,6 +683,14 @@ const PostCard: React.FC<PostCardProps> = ({ post, variant = 'feed', onDelete, o
                    </>
                 ) : (
                    <>
+                     {/* RESTORING CONTACT BUTTON */}
+                     {(post.contactPhone || post.contactEmail) && (
+                        <button onClick={handleContactClick} className="w-full flex items-center gap-3 p-4 hover:bg-blue-50 rounded-2xl transition-colors text-blue-600 border border-gray-100 mb-2">
+                            <Phone size={22} />
+                            <span className="font-bold">{t('contact_header')}</span>
+                        </button>
+                     )}
+
                      <button onClick={handleHidePost} className="w-full flex items-center gap-3 p-4 hover:bg-gray-50 rounded-2xl transition-colors text-gray-700 border border-gray-100">
                         <EyeOff size={22} />
                         <span className="font-bold">{t('post_hide')}</span>
