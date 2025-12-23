@@ -683,8 +683,8 @@ const PostCard: React.FC<PostCardProps> = ({ post, variant = 'feed', onDelete, o
                    </>
                 ) : (
                    <>
-                     {/* RESTORING CONTACT BUTTON */}
-                     {(post.contactPhone || post.contactEmail) && (
+                     {/* RESTORING CONTACT BUTTON - FIX: Check jobStatus before showing */}
+                     {(post.contactPhone || post.contactEmail) && jobStatus === 'open' && (
                         <button onClick={handleContactClick} className="w-full flex items-center gap-3 p-4 hover:bg-blue-50 rounded-2xl transition-colors text-blue-600 border border-gray-100 mb-2">
                             <Phone size={22} />
                             <span className="font-bold">{t('contact_header')}</span>
