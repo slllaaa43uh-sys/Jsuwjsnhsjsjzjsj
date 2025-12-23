@@ -20,7 +20,7 @@ interface SettingsViewProps {
 const SettingsView: React.FC<SettingsViewProps> = ({ onClose, onProfileClick, onLogout, isDarkMode, onToggleDarkMode }) => {
   const { t, language, setLanguage } = useLanguage();
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
-  const [activeModal, setActiveModal] = useState<'none' | 'warnings' | 'privacy' | 'about' | 'report_problem' | 'wallet' | 'warning_notifications' | 'language_select'>('none');
+  const [activeModal, setActiveModal] = useState<'none' | 'warnings' | 'about' | 'report_problem' | 'wallet' | 'warning_notifications' | 'language_select'>('none');
   
   // Report State
   const [reportText, setReportText] = useState('');
@@ -37,12 +37,14 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onClose, onProfileClick, on
   // Format avatar URL if needed
   const avatarSrc = userAvatar ? (userAvatar.startsWith('http') ? userAvatar : `${API_BASE_URL}${userAvatar}`) : null;
 
+  const PRIVACY_POLICY_URL = "https://groovy-face-1cc.notion.site/eff89ba790bf40e5840c23afa01217d1";
+
   const settingsItems = [
     { id: 1, title: t('settings_subscriptions'), icon: CreditCard, color: 'text-purple-600', bg: 'bg-purple-50', action: () => setActiveModal('wallet') },
     { id: 2, title: t('settings_language'), icon: Languages, color: 'text-blue-600', bg: 'bg-blue-50', action: () => setActiveModal('language_select') },
     { id: 3, title: t('settings_dark_mode'), icon: Moon, color: 'text-indigo-600', bg: 'bg-indigo-50', action: () => {} }, // Toggle handled in render
     { id: 4, title: t('settings_warnings'), icon: AlertTriangle, color: 'text-orange-600', bg: 'bg-orange-50', action: () => setActiveModal('warnings') },
-    { id: 5, title: t('settings_privacy'), icon: Lock, color: 'text-green-600', bg: 'bg-green-50', action: () => setActiveModal('privacy') },
+    { id: 5, title: t('settings_privacy'), icon: Lock, color: 'text-green-600', bg: 'bg-green-50', action: () => window.open(PRIVACY_POLICY_URL, '_blank') },
     { id: 6, title: t('settings_report'), icon: HelpCircle, color: 'text-red-600', bg: 'bg-red-50', action: () => setActiveModal('report_problem') },
     { id: 7, title: t('settings_about'), icon: Info, color: 'text-gray-600', bg: 'bg-gray-50', action: () => setActiveModal('about') },
     { id: 8, title: t('settings_warning_notifs'), icon: BellRing, color: 'text-yellow-600', bg: 'bg-yellow-50', action: () => setActiveModal('warning_notifications') },
@@ -188,21 +190,6 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onClose, onProfileClick, on
                         <h4 className="font-bold text-gray-900 mb-1">{t('warning_links_title')}</h4>
                         <p className="text-xs text-gray-500 leading-relaxed">{t('warning_links_desc')}</p>
                     </div>
-                </div>
-            </div>
-        );
-    } else if (activeModal === 'privacy') {
-        title = t('settings_privacy');
-        content = (
-            <div className="space-y-6">
-                <div className="bg-green-50 p-4 rounded-xl border border-green-100">
-                    <h3 className="font-bold text-green-800 mb-2 flex items-center gap-2">
-                        <Lock size={18} />
-                        {t('privacy_title')}
-                    </h3>
-                    <p className="text-sm text-green-700 leading-relaxed whitespace-pre-line">
-                        {t('privacy_desc')}
-                    </p>
                 </div>
             </div>
         );

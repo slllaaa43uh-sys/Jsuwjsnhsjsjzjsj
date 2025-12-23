@@ -30,8 +30,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   // Registration specific error
   const [registerError, setRegisterError] = useState<string | null>(null);
   
-  // Privacy Policy Modal
-  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const PRIVACY_POLICY_URL = "https://groovy-face-1cc.notion.site/eff89ba790bf40e5840c23afa01217d1";
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -356,7 +355,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                                 {t('i_agree_to')} 
                                 <button 
                                     type="button"
-                                    onClick={() => setShowPrivacyModal(true)}
+                                    onClick={() => window.open(PRIVACY_POLICY_URL, '_blank')}
                                     className="text-blue-600 underline mx-1 font-bold"
                                 >
                                     {t('privacy_policy_link')}
@@ -387,45 +386,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                     </div>
                 )}
 
-            </div>
-        </div>
-      )}
-
-      {/* Privacy Policy Bottom Sheet Modal */}
-      {showPrivacyModal && (
-        <div className="fixed inset-0 z-[60] flex items-end justify-center">
-            {/* Backdrop */}
-            <div 
-                className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
-                onClick={() => setShowPrivacyModal(false)}
-            />
-            {/* Sheet */}
-            <div className="bg-white w-full max-w-md h-[70vh] rounded-t-3xl relative z-10 animate-in slide-in-from-bottom duration-300 flex flex-col shadow-2xl">
-                <div className="flex items-center justify-between p-5 border-b border-gray-100">
-                    <h3 className="text-lg font-bold text-gray-900">{t('privacy_title')}</h3>
-                    <button onClick={() => setShowPrivacyModal(false)} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">
-                        <X size={20} className="text-gray-600" />
-                    </button>
-                </div>
-                <div className="flex-1 overflow-y-auto p-5 no-scrollbar">
-                    <div className="bg-green-50 p-4 rounded-xl border border-green-100 mb-4">
-                        <h3 className="font-bold text-green-800 mb-2 flex items-center gap-2">
-                            <LockIcon size={18} />
-                            {t('privacy_title')}
-                        </h3>
-                        <p className="text-sm text-green-700 leading-relaxed whitespace-pre-line font-medium">
-                            {t('privacy_desc')}
-                        </p>
-                    </div>
-                </div>
-                <div className="p-5 border-t border-gray-100 bg-white pb-safe rounded-b-3xl">
-                    <button 
-                        onClick={() => setShowPrivacyModal(false)}
-                        className="w-full py-3.5 bg-black text-white rounded-xl font-bold hover:bg-gray-900 transition-colors"
-                    >
-                        {t('close')}
-                    </button>
-                </div>
             </div>
         </div>
       )}
