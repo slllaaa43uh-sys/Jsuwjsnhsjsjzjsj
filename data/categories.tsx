@@ -1,10 +1,11 @@
+
 import { 
   Car, Home, Smartphone, Armchair, Laptop, Gamepad2, 
   Shirt, Dog, Tractor, Wrench, Tent, Truck,
   CarFront, Shield, ChefHat, Calculator, 
   HardHat, Stethoscope, Zap, Code, Palette, Phone,
   Camera, Watch, Bird, Coins, Book, Dumbbell, Baby, Hash, Store,
-  Hammer, PenTool, ShoppingBag, Languages, GraduationCap, FolderKanban, Coffee, Bike, Scissors, Sprout
+  Hammer, PenTool, ShoppingBag, Languages, GraduationCap, FolderKanban, Coffee, Bike, Scissors, Sprout, Briefcase
 } from 'lucide-react';
 
 export const HARAJ_CATEGORIES = [
@@ -29,6 +30,7 @@ export const HARAJ_CATEGORIES = [
     { name: "خيم وتخييم", icon: Tent, color: "bg-green-700", lightColor: "bg-green-100", iconColor: "text-green-700" },
     { name: "أرقام مميزة", icon: Hash, color: "bg-violet-700", lightColor: "bg-violet-100", iconColor: "text-violet-700" },
     { name: "نقل عفش", icon: Truck, color: "bg-cyan-700", lightColor: "bg-cyan-100", iconColor: "text-cyan-700" },
+    { name: "أدوات أخرى", icon: Wrench, color: "bg-gray-700", lightColor: "bg-gray-100", iconColor: "text-gray-700" },
 ];
 
 export const JOB_CATEGORIES = [
@@ -53,4 +55,5 @@ export const JOB_CATEGORIES = [
     { name: "توصيل", icon: Bike, color: "text-green-600", bg: "bg-green-100" },
     { name: "حلاق / خياط", icon: Scissors, color: "text-violet-600", bg: "bg-violet-100" },
     { name: "مزارع", icon: Sprout, color: "text-emerald-600", bg: "bg-emerald-100" },
+    { name: "وظائف أخرى", icon: Briefcase, color: "text-gray-600", bg: "bg-gray-100" },
 ];

@@ -380,7 +380,9 @@ const translations = {
     "قيد المفاوضة": "قيد المفاوضة",
 
     // Custom Job Translations
-    "سائق خاص": "سائق"
+    "سائق خاص": "سائق",
+    "وظائف أخرى": "وظائف أخرى",
+    "أدوات أخرى": "أدوات أخرى"
   },
   en: {
     // App
@@ -770,6 +772,7 @@ const translations = {
     "خيم وتخييم": "Camping",
     "أرقام مميزة": "VIP Numbers",
     "نقل عفش": "Furniture Moving",
+    "أدوات أخرى": "Other Tools",
 
     // Job Categories
     "سائق خاص": "Private Driver",
@@ -793,6 +796,7 @@ const translations = {
     "توصيل": "Delivery",
     "حلاق / خياط": "Barber / Tailor",
     "مزارع": "Farmer",
+    "وظائف أخرى": "Other Jobs"
   }
 };
 
