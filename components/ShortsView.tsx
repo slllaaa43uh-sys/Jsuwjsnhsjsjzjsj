@@ -280,7 +280,7 @@ const ShortsView: React.FC<ShortsViewProps> = ({
 
                 // FIX 2: Combine title and text to ensure visibility when pressing 'Next'
                 const displayTitle = item.title || '';
-                const displayText = item.text || '';
+                const displayText = item.content || '';
                 const combinedDesc = displayTitle ? (displayText ? `${displayTitle}\n${displayText}` : displayTitle) : displayText;
 
                 return {
