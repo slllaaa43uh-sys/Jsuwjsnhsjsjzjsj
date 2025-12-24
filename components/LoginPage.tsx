@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { API_BASE_URL } from '../constants';
-import { Lock, Mail, ArrowLeft, X, User, Building2, ChevronRight, Check, ArrowRight, Briefcase } from 'lucide-react';
+import { Lock, Mail, ArrowLeft, X, User, Building2, ChevronRight, Check, ArrowRight, Briefcase, Globe } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface LoginPageProps {
@@ -30,7 +30,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   // Registration specific error
   const [registerError, setRegisterError] = useState<string | null>(null);
   
-  const PRIVACY_POLICY_URL = "https://groovy-face-1cc.notion.site/eff89ba790bf40e5840c23afa01217d1";
+  // Privacy Policy View State
+  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,7 +63,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
               localStorage.setItem('username', userObj.username || '');
             }
             onLoginSuccess(data.token);
-        }, 1000);
+        }, 800);
       } else {
         setError(data.message || 'Login failed. Please check credentials.');
         setIsLoading(false);
@@ -110,7 +111,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         const data = await response.json();
 
         if (response.ok && data.token) {
-            // Auto Login Logic
             localStorage.setItem('token', data.token);
             const userObj = data.user || {};
             const userId = userObj._id || userObj.id;
@@ -138,85 +138,84 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   };
 
   return (
-    <div className="min-h-screen relative flex flex-col items-center justify-center p-6 overflow-hidden bg-gray-50">
+    <div className="min-h-screen relative flex flex-col items-center justify-center p-6 overflow-hidden bg-[#0f172a]">
       
-      {/* --- Animated Background --- */}
+      {/* --- Advanced Animated Background --- */}
       <style>{`
-        @keyframes blob {
-          0% { transform: translate(0px, 0px) scale(1); }
-          33% { transform: translate(30px, -50px) scale(1.1); }
-          66% { transform: translate(-20px, 20px) scale(0.9); }
-          100% { transform: translate(0px, 0px) scale(1); }
-        }
-        @keyframes gradient-xy {
-            0%, 100% { background-position: 0% 50%; }
+        @keyframes gradient-flow {
+            0% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
-        .animate-blob { animation: blob 7s infinite; }
-        .animation-delay-2000 { animation-delay: 2s; }
-        .animation-delay-4000 { animation-delay: 4s; }
-        .bg-animated-mesh {
-            background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
-            background-size: 400% 400%;
-            animation: gradient-xy 15s ease infinite;
-            opacity: 0.1;
+        .bg-vivid-mesh {
+            background: linear-gradient(-45deg, #3b82f6, #8b5cf6, #ec4899, #06b6d4);
+            background-size: 300% 300%;
+            animation: gradient-flow 10s ease infinite;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.3);
+        }
+        .bg-lines {
+            background-image: linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 30px 30px;
         }
       `}</style>
       
-      {/* Background Layers */}
-      <div className="absolute inset-0 bg-white z-0"></div>
-      <div className="absolute inset-0 bg-animated-mesh z-0"></div>
+      {/* 1. Base Dark Layer */}
+      <div className="absolute inset-0 bg-[#0f172a] z-0"></div>
       
-      {/* Moving blobs for dynamic feel */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none opacity-40">
-        <div className="absolute top-0 -left-4 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
-        <div className="absolute top-0 -right-4 w-72 h-72 bg-yellow-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
-        <div className="absolute -bottom-8 left-20 w-72 h-72 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
-      </div>
+      {/* 2. Vivid Moving Gradient Layer */}
+      <div className="absolute inset-0 bg-vivid-mesh opacity-40 z-0"></div>
+      
+      {/* 3. Grid Lines Layer (Creates the "colors inside lines" effect) */}
+      <div className="absolute inset-0 bg-lines z-0 pointer-events-none"></div>
 
-      {/* Language Toggle Button */}
-      <div className={`absolute top-6 z-20 ${language === 'ar' ? 'left-6' : 'right-6'}`}>
+      {/* 4. Glowing Orbs for Depth */}
+      <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full bg-blue-600/30 blur-[100px] animate-pulse"></div>
+      <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full bg-purple-600/30 blur-[100px] animate-pulse delay-700"></div>
+
+      {/* Language Toggle */}
+      <div className={`absolute top-safe top-6 z-20 ${language === 'ar' ? 'left-6' : 'right-6'}`}>
         <button 
             onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
-            className="flex items-center gap-2 bg-white/80 hover:bg-white text-gray-700 font-bold py-2 px-4 rounded-full transition-all shadow-sm border border-gray-100 backdrop-blur-sm"
+            className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white font-bold py-2 px-4 rounded-full transition-all border border-white/20 backdrop-blur-md"
         >
-            {language === 'ar' ? (
-                <>
-                    <span className="text-sm">English</span>
-                    <ArrowLeft size={16} />
-                </>
-            ) : (
-                <>
-                    <span className="text-sm">العربية</span>
-                    <ArrowRight size={16} />
-                </>
-            )}
+            <Globe size={16} className="text-white" />
+            <span className="text-sm text-white">{language === 'ar' ? 'English' : 'العربية'}</span>
         </button>
       </div>
 
       {isLoading ? (
-        <div className="flex flex-col items-center justify-center z-10 bg-white/50 backdrop-blur-md p-8 rounded-3xl shadow-lg border border-white">
+        <div className="flex flex-col items-center justify-center z-10 glass-card p-10 rounded-[2.5rem] animate-in fade-in zoom-in duration-300">
             <div className="relative w-16 h-16">
-              <div className="absolute inset-0 rounded-full border-[4px] border-gray-200"></div>
+              <div className="absolute inset-0 rounded-full border-[4px] border-blue-100"></div>
               <div className="absolute inset-0 rounded-full border-[4px] border-t-blue-600 border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
             </div>
-            <p className="mt-6 text-gray-800 font-bold text-sm">{t('logging_in')}</p>
+            <p className="mt-6 text-gray-800 font-bold text-sm tracking-wide">{t('logging_in')}</p>
         </div>
       ) : (
-        <div className="w-full max-w-sm animate-in fade-in slide-in-from-bottom-4 duration-700 z-10">
+        <div className="w-full max-w-sm z-10 animate-in slide-in-from-bottom-8 fade-in duration-700">
           
           {/* Logo Section */}
           <div className="flex flex-col items-center mb-8">
-             <div className="w-20 h-20 bg-gradient-to-tr from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-xl shadow-blue-200 mb-4 transform hover:scale-105 transition-transform duration-300">
-                <Briefcase size={36} className="text-white" strokeWidth={2} />
+             <div className="w-24 h-24 bg-gradient-to-tr from-white to-blue-50 rounded-[2rem] flex items-center justify-center shadow-2xl shadow-blue-900/50 mb-6 transform hover:scale-105 transition-transform duration-300 border-4 border-white/10 backdrop-blur-sm relative overflow-hidden group">
+                <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <Briefcase size={40} className="text-blue-600 drop-shadow-sm" strokeWidth={2.5} />
              </div>
-             <h1 className="text-3xl font-black text-gray-900 mb-1 tracking-tight">{t('login_title')}</h1>
-             <p className="text-gray-500 text-sm font-medium">{t('login_subtitle')}</p>
+             <h1 className="text-4xl font-black text-white mb-2 tracking-tight drop-shadow-md">{t('login_title')}</h1>
+             <p className="text-blue-100 text-sm font-medium opacity-90">{t('login_subtitle')}</p>
           </div>
 
-          {/* Form Container */}
-          <div className="bg-white/70 backdrop-blur-lg border border-white rounded-[2rem] p-6 shadow-xl shadow-blue-900/5">
-              <form onSubmit={handleLogin} className="space-y-5">
+          {/* Card Container */}
+          <div className="glass-card rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden">
+              {/* Subtle top highlight */}
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-white/50 to-transparent opacity-50"></div>
+
+              <form onSubmit={handleLogin} className="space-y-5 relative z-10">
                 
                 <div className="space-y-1.5">
                     <label className="text-xs font-bold text-gray-600 px-1">{t('email_label')}</label>
@@ -229,7 +228,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                             required
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className={`block w-full py-4 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-bold text-sm ${language === 'ar' ? 'pr-12 pl-4 text-right' : 'pl-12 pr-4 text-left'}`}
+                            className={`block w-full py-4 bg-gray-50/50 border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all font-bold text-sm ${language === 'ar' ? 'pr-12 pl-4 text-right' : 'pl-12 pr-4 text-left'}`}
                             placeholder={t('email_placeholder')}
                             dir="ltr"
                         />
@@ -247,7 +246,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                             required
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className={`block w-full py-4 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-bold text-sm ${language === 'ar' ? 'pr-12 pl-4 text-right' : 'pl-12 pr-4 text-left'}`}
+                            className={`block w-full py-4 bg-gray-50/50 border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all font-bold text-sm ${language === 'ar' ? 'pr-12 pl-4 text-right' : 'pl-12 pr-4 text-left'}`}
                             placeholder="••••••••"
                             dir="ltr"
                         />
@@ -255,7 +254,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 </div>
 
                 {error && (
-                  <div className="py-3 px-4 rounded-xl bg-red-50 text-red-600 text-xs font-bold text-center border border-red-100 flex items-center justify-center gap-2">
+                  <div className="py-3 px-4 rounded-xl bg-red-50 text-red-600 text-xs font-bold text-center border border-red-100 flex items-center justify-center gap-2 animate-in slide-in-from-top-2">
                     <X size={14} />
                     {error}
                   </div>
@@ -263,40 +262,45 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
                 <button
                   type="submit"
-                  className="w-full py-4 bg-gradient-to-r from-gray-900 to-black text-white rounded-xl font-bold text-base hover:shadow-lg hover:shadow-gray-300 active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 mt-4"
+                  className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl font-bold text-base shadow-lg shadow-blue-500/30 active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2 mt-2 relative overflow-hidden group"
                 >
-                  <span>{t('login_button')}</span>
-                  {language === 'ar' ? <ArrowLeft size={18} /> : <ArrowRight size={18} />}
+                  <span className="relative z-10">{t('login_button')}</span>
+                  {language === 'ar' ? <ArrowLeft size={18} className="relative z-10" /> : <ArrowRight size={18} className="relative z-10" />}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
                 </button>
               </form>
 
-              <div className="mt-6 flex flex-col items-center gap-3 border-t border-gray-100 pt-6">
+              <div className="mt-8 flex flex-col items-center gap-4 relative z-10">
+                 <div className="flex items-center w-full gap-4">
+                    <div className="h-px bg-gray-200 flex-1"></div>
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">OR</span>
+                    <div className="h-px bg-gray-200 flex-1"></div>
+                 </div>
+
                  <button 
                    onClick={() => setIsRegisterOpen(true)}
-                   className="text-sm font-bold text-blue-600 hover:text-blue-700 transition-colors bg-blue-50 px-4 py-2 rounded-full hover:bg-blue-100"
+                   className="text-sm font-bold text-gray-700 hover:text-blue-600 transition-colors bg-gray-50 hover:bg-blue-50 px-6 py-2.5 rounded-full border border-gray-200 hover:border-blue-200"
                  >
                    {t('create_new_account')}
                  </button>
                  
-                 <a href="#" className="text-xs text-gray-400 hover:text-gray-600 transition-colors font-medium">{t('forgot_password')}</a>
+                 <a href="#" className="text-xs text-gray-400 hover:text-gray-600 transition-colors font-medium hover:underline">{t('forgot_password')}</a>
               </div>
           </div>
         </div>
       )}
 
-      {/* Registration Bottom Sheet */}
+      {/* Registration Bottom Sheet - Matches new aesthetic */}
       {isRegisterOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-center">
-            {/* Backdrop */}
             <div 
-                className="absolute inset-0 bg-black/60 backdrop-blur-md transition-opacity"
+                className="absolute inset-0 bg-slate-900/80 backdrop-blur-md transition-opacity"
                 onClick={() => { setIsRegisterOpen(false); setRegisterError(null); }}
             />
             
-            {/* Sheet */}
-            <div className="bg-white w-full max-w-md rounded-t-[2rem] p-6 relative z-10 animate-in slide-in-from-bottom duration-300 max-h-[90vh] overflow-y-auto no-scrollbar shadow-2xl">
+            <div className="bg-white w-full max-w-md rounded-t-[2.5rem] p-6 relative z-10 animate-in slide-in-from-bottom duration-300 max-h-[90vh] overflow-y-auto no-scrollbar shadow-2xl">
                 
-                <div className="flex items-center justify-between mb-8 sticky top-0 bg-white z-20 pb-2">
+                <div className="flex items-center justify-between mb-8 sticky top-0 bg-white z-20 pb-2 border-b border-gray-50">
                     <h2 className="text-2xl font-black text-gray-900">
                         {registerStep === 'type' ? t('register_title') : t('register_subtitle')}
                     </h2>
@@ -311,30 +315,30 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                         
                         <button 
                             onClick={() => handleRegisterTypeSelect('individual')}
-                            className="w-full flex items-center gap-4 p-5 rounded-2xl border-2 border-gray-100 hover:border-blue-500 hover:bg-blue-50 transition-all group bg-white shadow-sm"
+                            className="w-full flex items-center gap-4 p-5 rounded-[1.5rem] border border-gray-100 bg-gray-50 hover:bg-blue-50 hover:border-blue-200 transition-all group shadow-sm"
                         >
-                            <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform shadow-inner">
+                            <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform shadow-sm">
                                 <User size={28} />
                             </div>
                             <div className={`flex-1 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                                 <h3 className="font-bold text-gray-900 text-lg">{t('register_individual_title')}</h3>
                                 <p className="text-xs text-gray-500 mt-1 font-medium">{t('register_individual_desc')}</p>
                             </div>
-                            <ChevronRight className={`text-gray-300 ${language === 'ar' ? 'rotate-180' : ''}`} />
+                            <ChevronRight className={`text-gray-300 group-hover:text-blue-500 ${language === 'ar' ? 'rotate-180' : ''}`} />
                         </button>
 
                         <button 
                             onClick={() => handleRegisterTypeSelect('company')}
-                            className="w-full flex items-center gap-4 p-5 rounded-2xl border-2 border-gray-100 hover:border-purple-500 hover:bg-purple-50 transition-all group bg-white shadow-sm"
+                            className="w-full flex items-center gap-4 p-5 rounded-[1.5rem] border border-gray-100 bg-gray-50 hover:bg-purple-50 hover:border-purple-200 transition-all group shadow-sm"
                         >
-                            <div className="w-14 h-14 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 group-hover:scale-110 transition-transform shadow-inner">
+                            <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-purple-600 group-hover:scale-110 transition-transform shadow-sm">
                                 <Building2 size={28} />
                             </div>
                             <div className={`flex-1 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                                 <h3 className="font-bold text-gray-900 text-lg">{t('register_commercial_title')}</h3>
                                 <p className="text-xs text-gray-500 mt-1 font-medium">{t('register_commercial_desc')}</p>
                             </div>
-                            <ChevronRight className={`text-gray-300 ${language === 'ar' ? 'rotate-180' : ''}`} />
+                            <ChevronRight className={`text-gray-300 group-hover:text-purple-500 ${language === 'ar' ? 'rotate-180' : ''}`} />
                         </button>
                     </div>
                 ) : (
@@ -345,7 +349,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                                 type="text"
                                 value={regName}
                                 onChange={(e) => setRegName(e.target.value)}
-                                className={`w-full p-4 bg-gray-50 rounded-xl border border-gray-200 focus:border-blue-500 focus:bg-white focus:outline-none transition-all font-bold text-sm ${language === 'ar' ? 'text-right' : 'text-left'}`}
+                                className={`w-full p-4 bg-gray-50 rounded-2xl border border-gray-200 focus:border-blue-500 focus:bg-white focus:outline-none transition-all font-bold text-sm ${language === 'ar' ? 'text-right' : 'text-left'}`}
                                 placeholder={getPlaceholderName()}
                             />
                         </div>
@@ -356,40 +360,42 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                                 type="email"
                                 value={regEmail}
                                 onChange={(e) => setRegEmail(e.target.value)}
-                                className={`w-full p-4 bg-gray-50 rounded-xl border border-gray-200 focus:border-blue-500 focus:bg-white focus:outline-none transition-all font-bold text-sm dir-ltr ${language === 'ar' ? 'text-right' : 'text-left'}`}
+                                className={`w-full p-4 bg-gray-50 rounded-2xl border border-gray-200 focus:border-blue-500 focus:bg-white focus:outline-none transition-all font-bold text-sm dir-ltr ${language === 'ar' ? 'text-right' : 'text-left'}`}
                                 placeholder="example@mail.com"
                             />
                         </div>
 
-                        <div>
-                            <label className="block text-xs font-bold text-gray-500 mb-1.5 px-1">{t('password_label')}</label>
-                            <input 
-                                type="password"
-                                value={regPass}
-                                onChange={(e) => setRegPass(e.target.value)}
-                                className={`w-full p-4 bg-gray-50 rounded-xl border border-gray-200 focus:border-blue-500 focus:bg-white focus:outline-none transition-all font-bold text-sm ${language === 'ar' ? 'text-right' : 'text-left'}`}
-                                placeholder="••••••••"
-                            />
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 mb-1.5 px-1">{t('password_label')}</label>
+                                <input 
+                                    type="password"
+                                    value={regPass}
+                                    onChange={(e) => setRegPass(e.target.value)}
+                                    className={`w-full p-4 bg-gray-50 rounded-2xl border border-gray-200 focus:border-blue-500 focus:bg-white focus:outline-none transition-all font-bold text-sm ${language === 'ar' ? 'text-right' : 'text-left'}`}
+                                    placeholder="••••••••"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 mb-1.5 px-1">{t('confirm_password')}</label>
+                                <input 
+                                    type="password"
+                                    value={regConfirmPass}
+                                    onChange={(e) => setRegConfirmPass(e.target.value)}
+                                    className={`w-full p-4 bg-gray-50 rounded-2xl border border-gray-200 focus:border-blue-500 focus:bg-white focus:outline-none transition-all font-bold text-sm ${language === 'ar' ? 'text-right' : 'text-left'}`}
+                                    placeholder="••••••••"
+                                />
+                            </div>
                         </div>
 
-                        <div>
-                            <label className="block text-xs font-bold text-gray-500 mb-1.5 px-1">{t('confirm_password')}</label>
-                            <input 
-                                type="password"
-                                value={regConfirmPass}
-                                onChange={(e) => setRegConfirmPass(e.target.value)}
-                                className={`w-full p-4 bg-gray-50 rounded-xl border border-gray-200 focus:border-blue-500 focus:bg-white focus:outline-none transition-all font-bold text-sm ${language === 'ar' ? 'text-right' : 'text-left'}`}
-                                placeholder="••••••••"
-                            />
-                        </div>
-
-                        <div className="flex items-center gap-2 mt-4 px-1">
+                        <div className="flex items-center gap-2 mt-4 px-1 bg-blue-50 p-3 rounded-xl border border-blue-100">
                             <div 
                                 onClick={() => {
                                     setAgreedToPolicy(!agreedToPolicy);
                                     if (!agreedToPolicy) setRegisterError(null);
                                 }}
-                                className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center cursor-pointer transition-colors ${agreedToPolicy ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}
+                                className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center cursor-pointer transition-colors flex-shrink-0 ${agreedToPolicy ? 'bg-blue-600 border-blue-600' : 'border-gray-300 bg-white'}`}
                             >
                                 {agreedToPolicy && <Check size={16} className="text-white" strokeWidth={3} />}
                             </div>
@@ -397,7 +403,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                                 {t('i_agree_to')} 
                                 <button 
                                     type="button"
-                                    onClick={() => window.open(PRIVACY_POLICY_URL, '_blank')}
+                                    onClick={() => setShowPrivacyPolicy(true)}
                                     className="text-blue-600 underline mx-1 font-bold hover:text-blue-700"
                                 >
                                     {t('privacy_policy_link')}
@@ -415,14 +421,14 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                             <button 
                                 onClick={handleRegisterSubmit}
                                 disabled={isRegistering}
-                                className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-base hover:shadow-lg hover:shadow-blue-200 active:scale-[0.98] transition-all disabled:opacity-70 disabled:cursor-not-allowed disabled:shadow-none"
+                                className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-base hover:shadow-lg hover:shadow-blue-200 active:scale-[0.98] transition-all disabled:opacity-70 disabled:cursor-not-allowed disabled:shadow-none"
                             >
                                 {isRegistering ? t('registering') : t('register_button')}
                             </button>
                             
                             <button 
                                 onClick={() => { setRegisterStep('type'); setRegisterError(null); }}
-                                className="w-full py-3 text-gray-500 text-sm font-bold hover:text-gray-800 mt-2"
+                                className="w-full py-3 text-gray-500 text-sm font-bold hover:text-gray-800 mt-2 hover:bg-gray-50 rounded-xl transition-colors"
                             >
                                 {t('back')}
                             </button>
@@ -430,6 +436,27 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                     </div>
                 )}
 
+            </div>
+        </div>
+      )}
+
+      {/* Internal Privacy Policy View - Full Screen Overlay */}
+      {showPrivacyPolicy && (
+        <div className="fixed inset-0 z-[200] bg-white flex flex-col animate-in slide-in-from-right duration-300">
+            <div className="px-4 py-4 border-b border-gray-100 flex items-center gap-3 sticky top-0 bg-white z-10 pt-safe">
+                <button 
+                    onClick={() => setShowPrivacyPolicy(false)} 
+                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                    <ArrowLeft size={24} className={`text-gray-800 ${language === 'ar' ? '' : 'rotate-180'}`} />
+                </button>
+                <h2 className="text-lg font-bold text-gray-900">{t('privacy_policy_link')}</h2>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5 pb-safe">
+                <h3 className="text-xl font-black text-gray-900 mb-4">{t('privacy_title')}</h3>
+                <p className="text-gray-600 text-sm leading-loose whitespace-pre-wrap">
+                    {t('privacy_desc')}
+                </p>
             </div>
         </div>
       )}

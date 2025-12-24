@@ -1430,7 +1430,7 @@ const ShortsView: React.FC<ShortsViewProps> = ({
                 className="absolute left-0 h-1 bg-white rounded-full transition-none shadow-[0_0_8px_rgba(255,255,255,0.8)]"
                 style={{ width: '0%' }}
             >
-            <div className={`absolute -right-1.5 top-1/2 -translate-x-1/2 w-3 h-3 bg-white rounded-full shadow-md scale-0 group-hover:scale-100 ${isScrubbing ? 'scale-125' : ''} transition-transform z-20`}>
+            <div className={`absolute right-0 top-1/2 translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-white rounded-full shadow-md scale-0 group-hover:scale-100 ${isScrubbing ? 'scale-125' : ''} transition-transform z-20`}>
                 {isScrubbing && (
                     <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-black/80 text-white text-[10px] font-bold py-1 px-2 rounded-md whitespace-nowrap backdrop-blur-md border border-white/20">
                         {currentTimeDisplay}

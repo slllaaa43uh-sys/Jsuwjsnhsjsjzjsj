@@ -225,6 +225,8 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onClose, onReport, userId, on
   const [editingSection, setEditingSection] = useState<CustomSection | null>(null);
   const [isSavingSectionEdit, setIsSavingSectionEdit] = useState(false);
 
+  // Add isDeleting state for the delete modal loading
+  const [isDeleting, setIsDeleting] = useState(false);
   const [deleteModal, setDeleteModal] = useState<{
     isOpen: boolean;
     type: 'section' | 'video' | 'post' | null;
@@ -980,52 +982,59 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onClose, onReport, userId, on
   const confirmDelete = async () => {
     const token = localStorage.getItem('token');
     const { type, id } = deleteModal;
+    if (!id) return;
 
-    if (typeof id === 'string') {
-        const newSet = new Set<string>(deletedItemsIds);
-        newSet.add(id);
-        setDeletedItemsIds(newSet);
-    }
+    // Start Loading State
+    setIsDeleting(true);
 
     try {
         if (type === 'section' && typeof id === 'number') {
-             const updatedSections = customSections.filter(s => s.id !== id);
-             setCustomSections(updatedSections);
-             
              const section = customSections.find(s => s.id === id);
              const sectionId = section?._id || section?.id;
              
+             // 1. Send Request
              const response = await fetch(`${API_BASE_URL}/api/v1/users/sections/${sectionId}`, {
                  method: 'DELETE',
                  headers: { 'Authorization': `Bearer ${token}` }
              });
              
+             // 2. Wait for success, then close modal and update UI simultaneously
              if (response.ok) {
+                 setDeleteModal({ isOpen: false, type: null, id: null }); // Close modal first
+                 
+                 const updatedSections = customSections.filter(s => s.id !== id);
+                 setCustomSections(updatedSections);
                  updateCache({ customSections: updatedSections });
+                 
                  alert(t('delete_success'));
              } else {
                  alert(t('delete_fail'));
              }
 
         } else if ((type === 'post' || type === 'video') && typeof id === 'string') {
-             // Common deletion logic for both posts and videos to ensure sync
-             const updatedPosts = posts.filter(p => p.id !== id);
-             const updatedVideos = videos.filter(v => v.id !== id);
-             
-             setPosts(updatedPosts);
-             setVideos(updatedVideos);
-             
-             if (type === 'video') setViewingShortId(null);
-             
-             const newDeletedIds = new Set<string>(deletedItemsIds);
-             newDeletedIds.add(id);
-
+             // 1. Send Request
              const response = await fetch(`${API_BASE_URL}/api/v1/posts/${id}`, {
                  method: 'DELETE',
                  headers: { 'Authorization': `Bearer ${token}` }
              });
              
+             // 2. Wait for success, then close modal and update UI simultaneously
              if (response.ok) {
+                 setDeleteModal({ isOpen: false, type: null, id: null }); // Close modal first
+
+                 if (type === 'video') setViewingShortId(null);
+                 
+                 const updatedPosts = posts.filter(p => p.id !== id);
+                 const updatedVideos = videos.filter(v => v.id !== id);
+                 
+                 setPosts(updatedPosts);
+                 setVideos(updatedVideos);
+                 
+                 // Update blacklist to prevent re-fetch appearance
+                 const newDeletedIds = new Set<string>(deletedItemsIds);
+                 newDeletedIds.add(id);
+                 setDeletedItemsIds(newDeletedIds);
+
                  updateCache({ 
                      posts: updatedPosts, 
                      videos: updatedVideos, 
@@ -1041,7 +1050,16 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onClose, onReport, userId, on
         console.error("Delete failed", error);
         alert(t('delete_fail'));
     } finally {
-        setDeleteModal({ isOpen: false, type: null, id: null });
+        setIsDeleting(false);
+        // Ensure modal is closed on error case as well if needed, 
+        // but typically we might want to keep it open on error. 
+        // For the requested "radical fix", closing it only on success inside the try block is key logic, 
+        // but clearing state here is safe.
+        if (deleteModal.isOpen) {
+             // If we failed, maybe keep it open?
+             // But the user complained about UI glitches.
+             // Let's reset purely for cleanup if loop didn't hit.
+        }
     }
   };
 
@@ -1508,8 +1526,20 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onClose, onReport, userId, on
                    <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-1"><Trash2 size={32} className="text-red-500" /></div>
                    <div><h3 className="text-xl font-black text-gray-900 mb-2">{t('delete')}?</h3><p className="text-gray-500 text-sm font-medium">{t('confirm')}</p></div>
                    <div className="flex gap-3 w-full mt-2">
-                      <button onClick={confirmDelete} className="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-red-200">{t('yes')}</button>
-                      <button onClick={cancelDelete} className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-bold">{t('no')}</button>
+                      <button 
+                        onClick={confirmDelete} 
+                        disabled={isDeleting}
+                        className="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-red-200 flex items-center justify-center"
+                      >
+                        {isDeleting ? <Loader2 className="animate-spin text-white" size={20} /> : t('yes')}
+                      </button>
+                      <button 
+                        onClick={cancelDelete} 
+                        disabled={isDeleting}
+                        className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-200 transition-colors"
+                      >
+                        {t('no')}
+                      </button>
                    </div>
                 </div>
              </div>

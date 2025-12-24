@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { 
   X, CreditCard, Languages, Moon, AlertTriangle, 
   Lock, HelpCircle, Info, BellRing, ChevronLeft, LogOut, ShieldAlert, Send, Loader2,
-  Cpu, Nfc, Coins, Skull, Check, Gift, Briefcase, DollarSign, UserCheck, Link
+  Cpu, Nfc, Coins, Skull, Check, Gift, Briefcase, DollarSign, UserCheck, Link, ArrowLeft
 } from 'lucide-react';
 import Avatar from './Avatar';
 import { API_BASE_URL } from '../constants';
@@ -22,6 +22,9 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onClose, onProfileClick, on
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
   const [activeModal, setActiveModal] = useState<'none' | 'warnings' | 'about' | 'report_problem' | 'wallet' | 'warning_notifications' | 'language_select'>('none');
   
+  // Privacy Policy View State
+  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
+
   // Report State
   const [reportText, setReportText] = useState('');
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
@@ -37,14 +40,12 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onClose, onProfileClick, on
   // Format avatar URL if needed
   const avatarSrc = userAvatar ? (userAvatar.startsWith('http') ? userAvatar : `${API_BASE_URL}${userAvatar}`) : null;
 
-  const PRIVACY_POLICY_URL = "https://groovy-face-1cc.notion.site/eff89ba790bf40e5840c23afa01217d1";
-
   const settingsItems = [
     { id: 1, title: t('settings_subscriptions'), icon: CreditCard, color: 'text-purple-600', bg: 'bg-purple-50', action: () => setActiveModal('wallet') },
     { id: 2, title: t('settings_language'), icon: Languages, color: 'text-blue-600', bg: 'bg-blue-50', action: () => setActiveModal('language_select') },
     { id: 3, title: t('settings_dark_mode'), icon: Moon, color: 'text-indigo-600', bg: 'bg-indigo-50', action: () => {} }, // Toggle handled in render
     { id: 4, title: t('settings_warnings'), icon: AlertTriangle, color: 'text-orange-600', bg: 'bg-orange-50', action: () => setActiveModal('warnings') },
-    { id: 5, title: t('settings_privacy'), icon: Lock, color: 'text-green-600', bg: 'bg-green-50', action: () => window.open(PRIVACY_POLICY_URL, '_blank') },
+    { id: 5, title: t('settings_privacy'), icon: Lock, color: 'text-green-600', bg: 'bg-green-50', action: () => setShowPrivacyPolicy(true) },
     { id: 6, title: t('settings_report'), icon: HelpCircle, color: 'text-red-600', bg: 'bg-red-50', action: () => setActiveModal('report_problem') },
     { id: 7, title: t('settings_about'), icon: Info, color: 'text-gray-600', bg: 'bg-gray-50', action: () => setActiveModal('about') },
     { id: 8, title: t('settings_warning_notifs'), icon: BellRing, color: 'text-yellow-600', bg: 'bg-yellow-50', action: () => setActiveModal('warning_notifications') },
@@ -452,6 +453,27 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onClose, onProfileClick, on
 
       {/* Render Active Modal */}
       {renderContentModal()}
+
+      {/* Internal Privacy Policy View */}
+      {showPrivacyPolicy && (
+        <div className="fixed inset-0 z-[200] bg-white dark:bg-black flex flex-col animate-in slide-in-from-right duration-300">
+            <div className="px-4 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-3 sticky top-0 bg-white dark:bg-black z-10 pt-safe">
+                <button 
+                    onClick={() => setShowPrivacyPolicy(false)} 
+                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+                >
+                    <ArrowLeft size={24} className={`text-gray-800 dark:text-white ${language === 'ar' ? '' : 'rotate-180'}`} />
+                </button>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">{t('privacy_policy_link')}</h2>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5 pb-safe">
+                <h3 className="text-xl font-black text-gray-900 dark:text-white mb-4">{t('privacy_title')}</h3>
+                <p className="text-gray-600 dark:text-gray-300 text-sm leading-loose whitespace-pre-wrap">
+                    {t('privacy_desc')}
+                </p>
+            </div>
+        </div>
+      )}
 
       {/* Logout Confirmation Modal */}
       {isLogoutConfirmOpen && (
