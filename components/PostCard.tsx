@@ -471,7 +471,10 @@ const PostCard: React.FC<PostCardProps> = ({ post, variant = 'feed', onDelete, o
   const handleRepostSubmit = async () => {
       setIsReposting(true);
       const token = localStorage.getItem('token');
+      // Fix: repost logic. If originalPost exists, we repost the originalPost id.
+      // Otherwise we repost this post.id
       const targetPostId = post.originalPost ? (post.originalPost.id || post.originalPost._id) : (post.id || post._id);
+      
       try {
           const response = await fetch(`${API_BASE_URL}/api/v1/posts/${targetPostId}/repost`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ content: repostText }) });
           if (response.ok) { alert(t('repost_success')); setIsRepostModalOpen(false); setRepostText(''); } else { alert(t('repost_fail')); }
@@ -601,6 +604,9 @@ const PostCard: React.FC<PostCardProps> = ({ post, variant = 'feed', onDelete, o
       activeCommentAction.user._id === 'me'
   );
 
+  // The post content to be shown in the repost modal
+  const contentToRepost = post.originalPost || post;
+
   return (
     <div className="mb-3">
       <div className="bg-white shadow-sm py-4 relative">
@@ -639,9 +645,76 @@ const PostCard: React.FC<PostCardProps> = ({ post, variant = 'feed', onDelete, o
         <div className="px-4 flex justify-between items-center">
           <button onClick={handleLike} className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg transition-all active:scale-95 ${optimisticLiked ? 'text-blue-600' : 'text-gray-600'}`}><ThumbsUp size={18} className={`transition-transform duration-200 ${optimisticLiked ? 'fill-current scale-110' : ''}`} /><span className="text-sm font-medium">{optimisticLiked ? t('liked') : t('like')}</span></button>
           <button onClick={handleOpenComments} className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors"><MessageCircle size={18} /><span className="text-sm font-medium">{t('comment')}</span></button>
-          <button onClick={() => setIsShareOpen(true)} className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors"><Share2 size={18} /><span className="text-sm font-medium">{t('share')}</span></button>
+          <button onClick={handleRepostClick} className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors"><Repeat size={18} /><span className="text-sm font-medium">{t('repost')}</span></button>
         </div>
       </div>
+
+      {/* --- REPOST PAGE (Full Screen) --- */}
+      {isRepostModalOpen && createPortal(
+        <div className="fixed inset-0 z-[20000] bg-white flex flex-col animate-in slide-in-from-bottom duration-300">
+            {/* Header */}
+            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between pt-safe bg-white z-10 sticky top-0">
+                <button 
+                    onClick={() => { setIsRepostModalOpen(false); setRepostText(''); }} 
+                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                    <X size={24} className="text-gray-700" />
+                </button>
+                <span className="font-bold text-lg text-gray-800">{t('repost')}</span>
+                <button 
+                    onClick={handleRepostSubmit} 
+                    disabled={isReposting}
+                    className="px-5 py-1.5 bg-green-600 text-white rounded-full font-bold text-sm shadow-md shadow-green-200 hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                    {isReposting && <Loader2 size={14} className="animate-spin" />}
+                    {t('repost_button')}
+                </button>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-4 pb-10">
+                {/* Input Area */}
+                <div className="flex gap-3 mb-6">
+                    <div className="flex-shrink-0">
+                        <Avatar 
+                            name={localStorage.getItem('userName') || 'أنا'} 
+                            src={localStorage.getItem('userAvatar') ? (localStorage.getItem('userAvatar')!.startsWith('http') ? localStorage.getItem('userAvatar') : `${API_BASE_URL}${localStorage.getItem('userAvatar')}`) : null} 
+                            className="w-10 h-10 border border-gray-100" 
+                        />
+                    </div>
+                    <textarea 
+                        value={repostText}
+                        onChange={(e) => setRepostText(e.target.value)}
+                        placeholder={t('write_thought')}
+                        className="w-full h-24 p-2 text-base outline-none resize-none placeholder:text-gray-400 dir-auto text-start bg-transparent"
+                        autoFocus
+                    />
+                </div>
+
+                {/* Quoted Post Preview */}
+                <div className="border border-gray-200 rounded-xl overflow-hidden mx-1 shadow-sm">
+                    {/* Quoted Header */}
+                    <div className="p-3 bg-gray-50 flex items-center gap-2 border-b border-gray-100">
+                        <Avatar 
+                            name={contentToRepost.user.name} 
+                            src={contentToRepost.user.avatar} 
+                            className="w-8 h-8" 
+                            textClassName="text-xs" 
+                        />
+                        <div className="flex flex-col">
+                            <span className="font-bold text-xs text-gray-900">{contentToRepost.user.name}</span>
+                            <span className="text-[10px] text-gray-500">{contentToRepost.timeAgo}</span>
+                        </div>
+                    </div>
+                    
+                    {/* Quoted Content */}
+                    <div className="bg-white">
+                        {renderPostContent(contentToRepost)}
+                    </div>
+                </div>
+            </div>
+        </div>, document.body
+      )}
 
       {/* --- MENU MODAL (OPTIONS) --- */}
       {isMenuOpen && createPortal(
@@ -880,33 +953,6 @@ const PostCard: React.FC<PostCardProps> = ({ post, variant = 'feed', onDelete, o
                </div>
             </div>
          </div>, document.body
-      )}
-
-      {/* REPOST MODAL */}
-      {isRepostModalOpen && createPortal(
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsRepostModalOpen(false)} />
-            <div className="bg-white rounded-2xl w-full max-w-sm relative z-10 animate-in zoom-in-95 p-5">
-                <h3 className="font-bold text-lg mb-4 text-center">{t('repost')}</h3>
-                <textarea 
-                    value={repostText}
-                    onChange={(e) => setRepostText(e.target.value)}
-                    placeholder={t('write_thought')}
-                    className="w-full bg-gray-50 rounded-xl p-3 text-sm min-h-[100px] mb-4 outline-none border border-gray-100 focus:border-blue-500 transition-colors"
-                />
-                <div className="flex gap-3">
-                    <button 
-                        onClick={handleRepostSubmit} 
-                        disabled={isReposting}
-                        className="flex-1 bg-green-600 text-white py-3 rounded-xl font-bold flex justify-center items-center gap-2"
-                    >
-                        {isReposting ? <Loader2 className="animate-spin" size={18} /> : <Repeat size={18} />}
-                        <span>{t('repost_button')}</span>
-                    </button>
-                    <button onClick={() => setIsRepostModalOpen(false)} className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-bold">{t('cancel')}</button>
-                </div>
-            </div>
-        </div>, document.body
       )}
 
       {/* DELETE CONFIRMATION MODAL */}
