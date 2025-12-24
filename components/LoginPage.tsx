@@ -1,7 +1,7 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { API_BASE_URL } from '../constants';
-import { Lock, Mail, ArrowLeft, X, User, Building2, ChevronRight, Check, ArrowRight, Briefcase, Globe } from 'lucide-react';
+import { Lock, Mail, ArrowLeft, X, User, Building2, ChevronRight, Check, ArrowRight, Briefcase, Globe, Loader2, Send, ShieldCheck } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface LoginPageProps {
@@ -15,6 +15,12 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Forgot Password State
+  const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetMessage, setResetMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
   // Registration State
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [registerStep, setRegisterStep] = useState<'type' | 'form'>('type');
@@ -27,11 +33,40 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [agreedToPolicy, setAgreedToPolicy] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   
+  // Verification State
+  const [isVerificationOpen, setIsVerificationOpen] = useState(false);
+  const [userIdForVerification, setUserIdForVerification] = useState<string | null>(null);
+  const [verificationCode, setVerificationCode] = useState<string[]>(Array(6).fill(''));
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  
   // Registration specific error
   const [registerError, setRegisterError] = useState<string | null>(null);
   
   // Privacy Policy View State
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
+
+  // Refs for OTP inputs
+  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // Function to handle OTP input changes
+  const handleOtpChange = (index: number, value: string) => {
+    if (isNaN(Number(value))) return;
+    const newCode = [...verificationCode];
+    newCode[index] = value;
+    setVerificationCode(newCode);
+
+    // Auto-focus next input
+    if (value && index < 5) {
+      otpRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !verificationCode[index] && index > 0) {
+      otpRefs.current[index - 1]?.focus();
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,7 +84,14 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
       const data = await response.json();
 
-      if (response.ok && data.token) {
+      if (response.ok) {
+        if (data.requireVerification) {
+            setUserIdForVerification(data.userId);
+            setIsVerificationOpen(true);
+            setIsLoading(false);
+            return;
+        }
+
         setTimeout(() => {
             localStorage.setItem('token', data.token);
             const userObj = data.user || {};
@@ -96,6 +138,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     }
 
     setIsRegistering(true);
+    
     try {
         const response = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
             method: 'POST',
@@ -104,29 +147,126 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 name: regName,
                 email: regEmail,
                 password: regPass,
-                userType: registerType // 'individual' or 'company'
+                userType: registerType
             })
         });
 
         const data = await response.json();
 
-        if (response.ok && data.token) {
+        if (response.ok) {
+            // Success: Move to verification step without logging in yet
+            setUserIdForVerification(data.userId);
+            setIsRegistering(false);
+            setIsRegisterOpen(false); // Close register modal
+            setIsVerificationOpen(true); // Open verification modal
+        } else {
+            setRegisterError(data.message || "Registration failed");
+            setIsRegistering(false);
+        }
+    } catch (e) {
+        setRegisterError("Connection error");
+        setIsRegistering(false);
+    }
+  };
+
+  const handleVerifyEmail = async () => {
+    const code = verificationCode.join('');
+    if (code.length !== 6) {
+        alert("يرجى إدخال الرمز المكون من 6 أرقام");
+        return;
+    }
+
+    if (!userIdForVerification) return;
+
+    setIsVerifying(true);
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/v1/auth/verify-email`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: userIdForVerification, code })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            // Success: Log in
             localStorage.setItem('token', data.token);
             const userObj = data.user || {};
             const userId = userObj._id || userObj.id;
+            
             if (userId) {
                 localStorage.setItem('userId', userId);
                 localStorage.setItem('userName', userObj.name || regName);
                 localStorage.setItem('userEmail', userObj.email || regEmail);
+                if (userObj.avatar) localStorage.setItem('userAvatar', userObj.avatar);
+                if (userObj.username) localStorage.setItem('username', userObj.username);
             }
             onLoginSuccess(data.token);
         } else {
-            setRegisterError(data.message || "Registration failed");
+            alert(data.message || t('verify_error'));
         }
     } catch (e) {
-        setRegisterError("Connection error");
+        alert(t('error_occurred'));
     } finally {
-        setIsRegistering(false);
+        setIsVerifying(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    if (!userIdForVerification) return;
+    
+    setIsResending(true);
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/v1/auth/resend-verification`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: userIdForVerification })
+        });
+
+        if (response.ok) {
+            alert(t('resend_code_sent'));
+        } else {
+            const data = await response.json();
+            alert(data.message || "Failed to resend code");
+        }
+    } catch (e) {
+        alert(t('error_occurred'));
+    } finally {
+        setIsResending(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!forgotEmail.trim()) {
+        setResetMessage({ type: 'error', text: 'الرجاء إدخال البريد الإلكتروني' });
+        return;
+    }
+    
+    setIsResetting(true);
+    setResetMessage(null);
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/v1/auth/forgotpassword`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: forgotEmail })
+        });
+
+        if (response.ok) {
+            setResetMessage({ type: 'success', text: t('reset_link_sent') });
+            setTimeout(() => {
+                setIsForgotPasswordOpen(false);
+                setResetMessage(null);
+                setForgotEmail('');
+            }, 3000);
+        } else {
+            const data = await response.json();
+            setResetMessage({ type: 'error', text: data.message || t('reset_link_fail') });
+        }
+    } catch (error) {
+        setResetMessage({ type: 'error', text: t('error_occurred') });
+    } finally {
+        setIsResetting(false);
     }
   };
 
@@ -284,13 +424,78 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                    {t('create_new_account')}
                  </button>
                  
-                 <a href="#" className="text-xs text-gray-400 hover:text-gray-600 transition-colors font-medium hover:underline">{t('forgot_password')}</a>
+                 <button 
+                    type="button"
+                    onClick={() => setIsForgotPasswordOpen(true)} 
+                    className="text-xs text-gray-400 hover:text-gray-600 transition-colors font-medium hover:underline"
+                 >
+                    {t('forgot_password')}
+                 </button>
               </div>
           </div>
         </div>
       )}
 
-      {/* Registration Bottom Sheet - Matches new aesthetic */}
+      {/* Forgot Password Bottom Sheet */}
+      {isForgotPasswordOpen && (
+        <div className="fixed inset-0 z-[60] flex items-end justify-center">
+            <div 
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+                onClick={() => { setIsForgotPasswordOpen(false); setResetMessage(null); }}
+            />
+            
+            <div className="bg-white w-full max-w-md rounded-t-3xl relative z-10 animate-in slide-in-from-bottom duration-300 pb-safe shadow-2xl p-6">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="font-bold text-xl text-gray-900">{t('forgot_password_title')}</h3>
+                    <button onClick={() => { setIsForgotPasswordOpen(false); setResetMessage(null); }} className="bg-gray-100 p-2 rounded-full hover:bg-gray-200 transition-colors">
+                        <X size={20} className="text-gray-600" />
+                    </button>
+                </div>
+
+                <div className="space-y-4">
+                    <p className="text-sm text-gray-500 font-medium leading-relaxed">
+                        {t('forgot_password_desc')}
+                    </p>
+
+                    <div className="relative group">
+                        <div className={`absolute inset-y-0 ${language === 'ar' ? 'right-0 pr-4' : 'left-0 pl-4'} flex items-center pointer-events-none`}>
+                            <Mail size={20} className="text-gray-400" />
+                        </div>
+                        <input
+                            type="email"
+                            value={forgotEmail}
+                            onChange={(e) => setForgotEmail(e.target.value)}
+                            className={`block w-full py-4 bg-gray-50 border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-bold text-sm ${language === 'ar' ? 'pr-12 pl-4 text-right' : 'pl-12 pr-4 text-left'}`}
+                            placeholder={t('email_placeholder')}
+                            dir="ltr"
+                        />
+                    </div>
+
+                    {resetMessage && (
+                        <div className={`py-3 px-4 rounded-xl text-xs font-bold text-center border flex items-center justify-center gap-2 animate-in zoom-in ${
+                            resetMessage.type === 'success' 
+                            ? 'bg-green-50 text-green-600 border-green-100' 
+                            : 'bg-red-50 text-red-600 border-red-100'
+                        }`}>
+                            {resetMessage.type === 'success' ? <Check size={16} /> : <X size={16} />}
+                            {resetMessage.text}
+                        </div>
+                    )}
+
+                    <button
+                        onClick={handleResetPassword}
+                        disabled={isResetting}
+                        className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl font-bold text-base shadow-lg shadow-blue-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                    >
+                        {isResetting ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} className={language === 'ar' ? 'rotate-180' : ''} />}
+                        <span>{isResetting ? t('sending') : t('send')}</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
+
+      {/* Registration Bottom Sheet */}
       {isRegisterOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-center">
             <div 
@@ -421,8 +626,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                             <button 
                                 onClick={handleRegisterSubmit}
                                 disabled={isRegistering}
-                                className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-base hover:shadow-lg hover:shadow-blue-200 active:scale-[0.98] transition-all disabled:opacity-70 disabled:cursor-not-allowed disabled:shadow-none"
+                                className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-base hover:shadow-lg hover:shadow-blue-200 active:scale-[0.98] transition-all disabled:opacity-70 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2"
                             >
+                                {isRegistering && <Loader2 size={18} className="animate-spin" />}
                                 {isRegistering ? t('registering') : t('register_button')}
                             </button>
                             
@@ -436,6 +642,77 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                     </div>
                 )}
 
+            </div>
+        </div>
+      )}
+
+      {/* Verification Code Bottom Sheet */}
+      {isVerificationOpen && (
+        <div className="fixed inset-0 z-[60] flex items-end justify-center">
+            <div 
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+                onClick={() => { if(!isVerifying) setIsVerificationOpen(false); }}
+            />
+            
+            <div className="bg-white w-full max-w-md rounded-t-3xl relative z-10 animate-in slide-in-from-bottom duration-300 pb-safe shadow-2xl p-6">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="font-bold text-xl text-gray-900">{t('verify_title')}</h3>
+                    <button onClick={() => { if(!isVerifying) setIsVerificationOpen(false); }} className="bg-gray-100 p-2 rounded-full hover:bg-gray-200 transition-colors">
+                        <X size={20} className="text-gray-600" />
+                    </button>
+                </div>
+
+                <div className="space-y-6 text-center">
+                    <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto ring-8 ring-green-50/50">
+                        <ShieldCheck size={40} className="text-green-600" />
+                    </div>
+
+                    <div>
+                        <p className="text-sm text-gray-500 font-bold mb-1">
+                            {t('verify_sent_desc')}
+                        </p>
+                        <p className="text-base text-gray-900 font-black dir-ltr">
+                            {email || regEmail}
+                        </p>
+                    </div>
+
+                    {/* 6-Digit OTP Inputs */}
+                    <div className="flex justify-center gap-2 dir-ltr">
+                        {Array.from({ length: 6 }).map((_, index) => (
+                            <input
+                                key={index}
+                                ref={(el) => (otpRefs.current[index] = el)}
+                                type="tel"
+                                maxLength={1}
+                                value={verificationCode[index]}
+                                onChange={(e) => handleOtpChange(index, e.target.value)}
+                                onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                                className="w-12 h-14 border-2 border-gray-200 rounded-xl text-center text-2xl font-bold focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all placeholder:text-gray-300 bg-gray-50 focus:bg-white"
+                                placeholder={t('verify_code_placeholder')}
+                            />
+                        ))}
+                    </div>
+
+                    <div className="space-y-3">
+                        <button
+                            onClick={handleVerifyEmail}
+                            disabled={isVerifying}
+                            className="w-full py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-2xl font-bold text-base shadow-lg shadow-green-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                        >
+                            {isVerifying ? <Loader2 size={20} className="animate-spin" /> : <Check size={20} />}
+                            <span>{isVerifying ? t('verifying') : t('verify_submit')}</span>
+                        </button>
+                        
+                        <button 
+                            className="text-xs text-gray-400 font-bold hover:text-gray-600 transition-colors flex items-center justify-center gap-2 w-full py-2"
+                            onClick={handleResendCode}
+                            disabled={isResending}
+                        >
+                            {isResending && <Loader2 size={12} className="animate-spin" />}
+                            {t('resend_code')}
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
       )}

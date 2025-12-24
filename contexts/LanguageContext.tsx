@@ -32,6 +32,12 @@ const translations = {
     email_placeholder: "name@example.com",
     logging_in: "جاري تسجيل الدخول...",
     
+    // Forgot Password
+    forgot_password_title: "إعادة تعيين كلمة المرور",
+    forgot_password_desc: "أدخل بريدك الإلكتروني المسجل وسنرسل لك رابطاً لإعادة تعيين كلمة المرور.",
+    reset_link_sent: "تم إرسال رابط إعادة التعيين إلى بريدك الإلكتروني",
+    reset_link_fail: "فشل في إرسال الرابط، تحقق من البريد الإلكتروني",
+    
     // Register Flow
     register_title: "إنشاء حساب جديد",
     register_subtitle: "أكمل بياناتك",
@@ -49,6 +55,17 @@ const translations = {
     registering: "جاري الإنشاء...",
     back: "عودة",
     privacy_error_msg: "الرجاء الموافقة على سياسة الخصوصية للمتابعة",
+    
+    // Verification
+    verify_title: "أدخل رمز التحقق",
+    verify_sent_desc: "تم إرسال رمز التحقق إلى بريدك الإلكتروني:",
+    verify_code_placeholder: "0",
+    verify_submit: "تحقق",
+    verifying: "جاري التحقق...",
+    resend_code: "إعادة إرسال الرمز",
+    resend_code_sent: "تم إعادة إرسال الرمز بنجاح",
+    verify_success: "تم التحقق بنجاح",
+    verify_error: "رمز التحقق غير صحيح أو منتهي الصلاحية",
 
     // Navigation
     nav_home: "الرئيسية",
@@ -402,6 +419,12 @@ const translations = {
     email_placeholder: "name@example.com",
     logging_in: "Logging in...",
 
+    // Forgot Password
+    forgot_password_title: "Reset Password",
+    forgot_password_desc: "Enter your registered email and we will send you a password reset link.",
+    reset_link_sent: "Reset link sent to your email",
+    reset_link_fail: "Failed to send link, check email",
+
     // Register Flow
     register_title: "Create New Account",
     register_subtitle: "Complete your data",
@@ -419,6 +442,17 @@ const translations = {
     registering: "Registering...",
     back: "Back",
     privacy_error_msg: "Please agree to the privacy policy to continue",
+    
+    // Verification
+    verify_title: "Enter Verification Code",
+    verify_sent_desc: "Verification code sent to your email:",
+    verify_code_placeholder: "0",
+    verify_submit: "Verify",
+    verifying: "Verifying...",
+    resend_code: "Resend Code",
+    resend_code_sent: "Code resent successfully",
+    verify_success: "Verified successfully",
+    verify_error: "Invalid or expired code",
 
     // Navigation
     nav_home: "Home",
