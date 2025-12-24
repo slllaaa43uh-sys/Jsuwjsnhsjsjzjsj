@@ -495,7 +495,11 @@ const PostDetailView: React.FC<PostDetailViewProps> = ({ notification, onBack, o
   const handleNativeShare = async () => {
     if (!post) return;
     try {
-        await navigator.share({ title: `منشور بواسطة ${post.user.name}`, text: post.content.substring(0, 100) + '...', url: `${window.location.origin}/post/${post.id}` });
+        await navigator.share({ 
+            title: `منشور بواسطة ${post.user.name}`, 
+            text: post.content.substring(0, 100) + '...', 
+            url: `${API_BASE_URL}/share/post/${post.id}` // Updated to backend sharing route
+        });
         setIsShareOpen(false);
     } catch (err) {}
   };
@@ -756,7 +760,7 @@ const PostDetailView: React.FC<PostDetailViewProps> = ({ notification, onBack, o
                     <div className="w-14 h-14 bg-blue-50 rounded-full flex items-center justify-center group-hover:bg-blue-100 transition-colors"><Share2 size={24} className="text-blue-600" /></div>
                     <span className="text-xs text-gray-600 font-medium">{t('share')}</span>
                  </button>
-                 <button className="flex flex-col items-center gap-2 group" onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/post/${post?.id}`); setIsShareOpen(false); }}>
+                 <button className="flex flex-col items-center gap-2 group" onClick={() => { navigator.clipboard.writeText(`${API_BASE_URL}/share/post/${post?.id}`); setIsShareOpen(false); alert(t('copy_link') + " (تم النسخ)"); }}>
                     <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center group-hover:bg-gray-200 transition-colors"><LinkIcon size={24} className="text-gray-600" /></div>
                     <span className="text-xs text-gray-600 font-medium">{t('copy_link')}</span>
                  </button>

@@ -539,7 +539,14 @@ const ShortsView: React.FC<ShortsViewProps> = ({
     if (!activeShortIdForShare) return;
     const short = shorts.find(s => s.id === activeShortIdForShare);
     if (!short) return;
-    try { await navigator.share({ title: `فيديو بواسطة ${short.user.name}`, text: short.description, url: `${window.location.origin}/post/${short.id}` }); setIsShareOpen(false); } catch (err) {}
+    try { 
+        await navigator.share({ 
+            title: `فيديو بواسطة ${short.user.name}`, 
+            text: short.description, 
+            url: `${API_BASE_URL}/share/short/${short.id}` 
+        }); 
+        setIsShareOpen(false); 
+    } catch (err) {}
   };
 
   const handleRepost = async () => { 
@@ -603,7 +610,13 @@ const ShortsView: React.FC<ShortsViewProps> = ({
       }
   };
 
-  const handleCopyLink = () => { if (activeShortIdForShare) { navigator.clipboard.writeText(`${window.location.origin}/p/${activeShortIdForShare}`); setIsShareOpen(false); alert(t('copy_link') + ' Done!'); } };
+  const handleCopyLink = () => { 
+      if (activeShortIdForShare) { 
+          navigator.clipboard.writeText(`${API_BASE_URL}/share/short/${activeShortIdForShare}`); 
+          setIsShareOpen(false); 
+          alert(t('copy_link') + ' Done!'); 
+      } 
+  };
 
   const handleFollow = async (e: React.MouseEvent, userId: string) => {
       e.stopPropagation();

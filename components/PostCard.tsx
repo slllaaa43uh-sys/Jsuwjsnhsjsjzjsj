@@ -463,8 +463,18 @@ const PostCard: React.FC<PostCardProps> = ({ post, variant = 'feed', onDelete, o
   
   const handleNativeShare = async () => {
     if (navigator.share) {
-        try { await navigator.share({ title: `منشور بواسطة ${post.user.name}`, text: post.content.substring(0, 100), url: `${API_BASE_URL}/p/${post.id}` }); setIsShareOpen(false); } catch (err) {}
-    } else { navigator.clipboard.writeText(`${API_BASE_URL}/p/${post.id}`); alert(t('copy_link') + " (تم النسخ)"); }
+        try { 
+            await navigator.share({ 
+                title: `منشور بواسطة ${post.user.name}`, 
+                text: post.content.substring(0, 100), 
+                url: `${API_BASE_URL}/share/post/${post.id}` // Updated to backend sharing route
+            }); 
+            setIsShareOpen(false); 
+        } catch (err) {}
+    } else { 
+        navigator.clipboard.writeText(`${API_BASE_URL}/share/post/${post.id}`); // Fallback for copy
+        alert(t('copy_link') + " (تم النسخ)"); 
+    }
   };
 
   const handleRepostClick = () => { setIsShareOpen(false); setIsRepostModalOpen(true); };
@@ -727,6 +737,21 @@ const PostCard: React.FC<PostCardProps> = ({ post, variant = 'feed', onDelete, o
              </div>
 
              <div className="p-5 pt-2 space-y-2">
+                {/* SHARE & COPY BUTTONS (NEW) */}
+                <button onClick={() => { handleNativeShare(); setIsMenuOpen(false); }} className="w-full flex items-center gap-3 p-4 hover:bg-gray-50 rounded-2xl transition-colors text-gray-700 border border-gray-100">
+                   <Share2 size={22} className="text-blue-600" />
+                   <span className="font-bold">{t('share')}</span>
+                </button>
+                
+                <button onClick={() => { 
+                    navigator.clipboard.writeText(`${API_BASE_URL}/share/post/${post.id}`); 
+                    alert(t('copy_link') + " (تم النسخ)"); 
+                    setIsMenuOpen(false); 
+                }} className="w-full flex items-center gap-3 p-4 hover:bg-gray-50 rounded-2xl transition-colors text-gray-700 border border-gray-100">
+                   <Link size={22} className="text-purple-600" />
+                   <span className="font-bold">{t('copy_link')}</span>
+                </button>
+
                 {post.user._id === currentUserId ? (
                    <>
                      {/* Job Status Section - Only show if it looks like a job or general post by me */}
@@ -794,7 +819,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, variant = 'feed', onDelete, o
              <div className="grid grid-cols-3 gap-4 mb-4">
                  <button onClick={handleNativeShare} className="flex flex-col items-center gap-2 group"><div className="w-14 h-14 bg-blue-50 rounded-full flex items-center justify-center group-hover:bg-blue-100 transition-colors"><Share2 size={24} className="text-blue-600" /></div><span className="text-xs text-gray-600 font-medium">{t('share')}</span></button>
                  <button onClick={handleRepostClick} className="flex flex-col items-center gap-2 group"><div className="w-14 h-14 bg-green-50 rounded-full flex items-center justify-center group-hover:bg-green-100 transition-colors"><Repeat size={24} className="text-green-600" /></div><span className="text-xs text-gray-600 font-medium">{t('repost')}</span></button>
-                 <button className="flex flex-col items-center gap-2 group" onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/post/${post?.id}`); setIsShareOpen(false); alert(t('copy_link') + " (تم النسخ)"); }}><div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center group-hover:bg-gray-200 transition-colors"><Link size={24} className="text-gray-600" /></div><span className="text-xs text-gray-600 font-medium">{t('copy_link')}</span></button>
+                 <button className="flex flex-col items-center gap-2 group" onClick={() => { navigator.clipboard.writeText(`${API_BASE_URL}/share/post/${post?.id}`); setIsShareOpen(false); alert(t('copy_link') + " (تم النسخ)"); }}><div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center group-hover:bg-gray-200 transition-colors"><Link size={24} className="text-gray-600" /></div><span className="text-xs text-gray-600 font-medium">{t('copy_link')}</span></button>
              </div>
              <button onClick={() => setIsShareOpen(false)} className="w-full mt-4 p-3 bg-gray-100 rounded-xl font-bold">{t('cancel')}</button>
           </div>
