@@ -1,7 +1,8 @@
 
 import React from 'react';
-import { Briefcase, Hexagon } from 'lucide-react';
+import { Hexagon } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import AppLogo from '../assets/images/app-logo.jpg';
 
 const SplashScreen: React.FC = () => {
   const { t } = useLanguage();
@@ -13,10 +14,8 @@ const SplashScreen: React.FC = () => {
 
       {/* المنتصف - شعار التطبيق واسمه - ثابت بدون حركة */}
       <div className="flex-1 flex flex-col items-center justify-center">
-        <div className="w-24 h-24 bg-gradient-to-tr from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-xl shadow-blue-200 dark:shadow-none mb-4 relative overflow-hidden">
-           {/* لمعة خفيفة على الشعار */}
-           <div className="absolute top-0 left-0 w-full h-full bg-white/10 rotate-45 transform scale-150 origin-top-left"></div>
-           <Briefcase size={48} className="text-white drop-shadow-md" strokeWidth={2} />
+        <div className="w-24 h-24 rounded-2xl shadow-xl shadow-blue-200 dark:shadow-none mb-4 overflow-hidden bg-white">
+           <img src={AppLogo} alt="مهنتي لي" className="w-full h-full object-contain" />
         </div>
         <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">{t('app_name')}</h1>
       </div>

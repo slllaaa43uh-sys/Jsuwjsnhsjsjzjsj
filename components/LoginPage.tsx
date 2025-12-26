@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { API_BASE_URL } from '../constants';
 import { Lock, Mail, ArrowLeft, X, User, Building2, ChevronRight, Check, ArrowRight, Briefcase, Globe, Loader2, Send, ShieldCheck } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import AppLogo from '../assets/images/app-logo.jpg';
 
 interface LoginPageProps {
   onLoginSuccess: (token: string) => void;
@@ -281,7 +282,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     <div className="min-h-screen bg-white flex flex-col relative overflow-hidden">
       
       {/* --- Top Curved Header --- */}
-      <div className="relative h-[25vh] w-full bg-gradient-to-tr from-blue-600 to-purple-600 rounded-b-[40px] shadow-lg flex flex-col items-center justify-center flex-shrink-0">
+      <div className="relative h-[25vh] w-full bg-gradient-to-br from-blue-600 via-cyan-500 to-green-500 rounded-b-[40px] shadow-lg flex flex-col items-center justify-center flex-shrink-0">
           
           {/* Language Toggle */}
           <div className={`absolute top-safe top-4 z-20 ${language === 'ar' ? 'left-4' : 'right-4'}`}>
@@ -301,8 +302,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
           {/* Overlapping Logo - Raised slightly */}
           <div className="absolute -bottom-8 shadow-xl rounded-2xl bg-white p-2">
-             <div className="w-20 h-20 bg-gradient-to-tr from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
-                <Briefcase size={36} className="text-white" strokeWidth={2.5} />
+             <div className="w-20 h-20 rounded-xl overflow-hidden">
+               <img src={AppLogo} alt="مهنتي لي" className="w-full h-full object-contain bg-white" />
              </div>
           </div>
       </div>
