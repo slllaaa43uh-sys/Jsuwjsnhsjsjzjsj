@@ -15,9 +15,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Image handling
+  // Image handling - Using absolute path from public directory
   const [logoError, setLogoError] = useState(false);
-  const AppLogo = "assets/images/app-logo.jpg";
+  const AppLogo = "/assets/images/app-logo.jpg";
 
   // Forgot Password State
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
@@ -311,15 +311,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                     src={AppLogo} 
                     alt="مهنتي لي" 
                     className="w-full h-full object-contain bg-white" 
-                    onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        // Try fallback path if relative fails
-                        if (!target.src.startsWith('/') && !target.src.includes(window.location.origin + '/assets')) {
-                            target.src = '/assets/images/app-logo.jpg';
-                        } else {
-                            setLogoError(true);
-                        }
-                    }}
+                    onError={() => setLogoError(true)}
                  />
                ) : (
                  <div className="w-full h-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">

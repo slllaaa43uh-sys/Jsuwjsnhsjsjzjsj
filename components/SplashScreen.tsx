@@ -6,8 +6,8 @@ import { useLanguage } from '../contexts/LanguageContext';
 const SplashScreen: React.FC = () => {
   const { t } = useLanguage();
   const [imgError, setImgError] = useState(false);
-  // Using relative path which works better in some hosting environments
-  const AppLogo = "assets/images/app-logo.jpg"; 
+  // Using absolute path from public directory for Vite
+  const AppLogo = "/assets/images/app-logo.jpg"; 
 
   return (
     <div className="fixed inset-0 z-[9999] bg-white dark:bg-black flex flex-col items-center justify-between pb-10 pt-safe">
@@ -23,15 +23,7 @@ const SplashScreen: React.FC = () => {
                src={AppLogo} 
                alt="مهنتي لي" 
                className="w-full h-full object-contain"
-               onError={(e) => {
-                 // If the first path fails, try root path, otherwise set error
-                 const target = e.target as HTMLImageElement;
-                 if (!target.src.startsWith('/') && !target.src.includes(window.location.origin + '/assets')) {
-                    target.src = '/assets/images/app-logo.jpg';
-                 } else {
-                    setImgError(true);
-                 }
-               }} 
+               onError={() => setImgError(true)} 
              />
            ) : (
              <div className="w-full h-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">

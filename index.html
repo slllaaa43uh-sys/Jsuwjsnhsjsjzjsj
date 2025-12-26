@@ -191,9 +191,9 @@
         <!-- Center Logo with Fallback Logic -->
         <div class="flex-1 flex flex-col items-center justify-center">
           <div class="w-24 h-24 rounded-2xl shadow-xl shadow-blue-200 dark:shadow-none mb-4 overflow-hidden bg-white flex items-center justify-center relative">
-             <!-- The Image -->
+             <!-- The Image: Using absolute path /assets/... which resolves to public/assets/... in Vite -->
              <img 
-               src="./assets/images/app-logo.jpg" 
+               src="/assets/images/app-logo.jpg" 
                alt="مهنتي لي" 
                class="w-full h-full object-contain relative z-10" 
                onerror="this.style.display='none'; document.getElementById('fallback-logo').style.display='flex'" 
