@@ -354,15 +354,14 @@ const Stories: React.FC<StoriesProps> = ({ onCreateStory, refreshKey, isUploadin
               return;
           }
 
-          const response = await fetch(`${API_BASE_URL}/api/v1/stories/${currentStory._id}`, {
+          const response = await fetch(`${API_BASE_URL}/api/v1/stories/${currentStory._id}/viewers`, {
               headers: { 'Authorization': `Bearer ${token}` }
           });
           
           if (response.ok) {
               const data = await response.json();
-              const storyData = data.story || data;
-              if (storyData.views) {
-                  setViewersList(storyData.views);
+              if (data.viewers) {
+                  setViewersList(data.viewers);
               } else {
                   setViewersList([]);
               }
@@ -791,12 +790,19 @@ const Stories: React.FC<StoriesProps> = ({ onCreateStory, refreshKey, isUploadin
                     {isLoadingViewers ? (
                         <div className="flex justify-center py-10"><Loader2 className="animate-spin text-blue-600" /></div>
                     ) : viewersList.length > 0 ? (
-                        viewersList.map((viewer: any, idx) => (
-                            <div key={idx} className="flex items-center gap-3 mb-4">
-                                <Avatar name={viewer.user?.name || 'User'} src={viewer.user?.avatar ? (viewer.user.avatar.startsWith('http') ? viewer.user.avatar : getMediaUrl(viewer.user.avatar)) : null} className="w-10 h-10 border border-gray-100" />
-                                <div><h4 className="font-bold text-sm text-gray-900">{viewer.user?.name || 'Unknown'}</h4><span className="text-xs text-gray-500">{getTimeAgo(viewer.viewedAt)}</span></div>
-                            </div>
-                        ))
+                        viewersList.map((viewer: any, idx) => {
+                            // Ensure name fallback handles all edge cases and localization
+                            const viewerName = viewer.user?.name || viewer.user?.username || (language === 'ar' ? 'مستخدم' : 'User');
+                            return (
+                                <div key={idx} className="flex items-center gap-3 mb-4">
+                                    <Avatar name={viewerName} src={viewer.user?.avatar ? (viewer.user.avatar.startsWith('http') ? viewer.user.avatar : getMediaUrl(viewer.user.avatar)) : null} className="w-10 h-10 border border-gray-100" />
+                                    <div>
+                                        <h4 className="font-bold text-sm text-gray-900">{viewerName}</h4>
+                                        <span className="text-xs text-gray-500">{getTimeAgo(viewer.viewedAt)}</span>
+                                    </div>
+                                </div>
+                            );
+                        })
                     ) : (
                         <div className="text-center text-gray-400 py-10 flex flex-col items-center">
                             <Eye size={40} className="mb-2 opacity-30" />
