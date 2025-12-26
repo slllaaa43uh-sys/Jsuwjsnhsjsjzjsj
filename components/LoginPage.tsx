@@ -14,9 +14,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Using direct path to avoid build errors if file is missing or outside src
-  const AppLogo = "./assets/images/app-logo.jpg";
+  
+  // Image handling
+  const [logoError, setLogoError] = useState(false);
+  const AppLogo = "assets/images/app-logo.jpg";
 
   // Forgot Password State
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
@@ -304,8 +305,27 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
           {/* Overlapping Logo - Raised slightly */}
           <div className="absolute -bottom-8 shadow-xl rounded-2xl bg-white p-2">
-             <div className="w-20 h-20 rounded-xl overflow-hidden">
-               <img src={AppLogo} alt="مهنتي لي" className="w-full h-full object-contain bg-white" />
+             <div className="w-20 h-20 rounded-xl overflow-hidden bg-white flex items-center justify-center">
+               {!logoError ? (
+                 <img 
+                    src={AppLogo} 
+                    alt="مهنتي لي" 
+                    className="w-full h-full object-contain bg-white" 
+                    onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        // Try fallback path if relative fails
+                        if (!target.src.startsWith('/') && !target.src.includes(window.location.origin + '/assets')) {
+                            target.src = '/assets/images/app-logo.jpg';
+                        } else {
+                            setLogoError(true);
+                        }
+                    }}
+                 />
+               ) : (
+                 <div className="w-full h-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
+                    <Briefcase size={32} className="text-white" />
+                 </div>
+               )}
              </div>
           </div>
       </div>

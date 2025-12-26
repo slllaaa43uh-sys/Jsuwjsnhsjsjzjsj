@@ -1,12 +1,13 @@
 
-import React from 'react';
-import { Hexagon } from 'lucide-react';
+import React, { useState } from 'react';
+import { Hexagon, Briefcase } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 const SplashScreen: React.FC = () => {
   const { t } = useLanguage();
-  // Using direct path to avoid build errors if file is missing or outside src
-  const AppLogo = "./assets/images/app-logo.jpg"; 
+  const [imgError, setImgError] = useState(false);
+  // Using relative path which works better in some hosting environments
+  const AppLogo = "assets/images/app-logo.jpg"; 
 
   return (
     <div className="fixed inset-0 z-[9999] bg-white dark:bg-black flex flex-col items-center justify-between pb-10 pt-safe">
@@ -16,8 +17,27 @@ const SplashScreen: React.FC = () => {
 
       {/* المنتصف - شعار التطبيق واسمه - ثابت بدون حركة */}
       <div className="flex-1 flex flex-col items-center justify-center">
-        <div className="w-24 h-24 rounded-2xl shadow-xl shadow-blue-200 dark:shadow-none mb-4 overflow-hidden bg-white">
-           <img src={AppLogo} alt="مهنتي لي" className="w-full h-full object-contain" />
+        <div className="w-24 h-24 rounded-2xl shadow-xl shadow-blue-200 dark:shadow-none mb-4 overflow-hidden bg-white flex items-center justify-center">
+           {!imgError ? (
+             <img 
+               src={AppLogo} 
+               alt="مهنتي لي" 
+               className="w-full h-full object-contain"
+               onError={(e) => {
+                 // If the first path fails, try root path, otherwise set error
+                 const target = e.target as HTMLImageElement;
+                 if (!target.src.startsWith('/') && !target.src.includes(window.location.origin + '/assets')) {
+                    target.src = '/assets/images/app-logo.jpg';
+                 } else {
+                    setImgError(true);
+                 }
+               }} 
+             />
+           ) : (
+             <div className="w-full h-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
+                <Briefcase size={40} className="text-white" />
+             </div>
+           )}
         </div>
         <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">{t('app_name')}</h1>
       </div>
