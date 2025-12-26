@@ -3,7 +3,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { API_BASE_URL } from '../constants';
 import { Lock, Mail, ArrowLeft, X, User, Building2, ChevronRight, Check, ArrowRight, Briefcase, Globe, Loader2, Send, ShieldCheck } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
-import AppLogo from '../assets/images/app-logo.jpg';
 
 interface LoginPageProps {
   onLoginSuccess: (token: string) => void;
@@ -15,6 +14,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Using direct path to avoid build errors if file is missing or outside src
+  const AppLogo = "./assets/images/app-logo.jpg";
 
   // Forgot Password State
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);

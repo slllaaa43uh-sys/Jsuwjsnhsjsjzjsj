@@ -2,10 +2,12 @@
 import React from 'react';
 import { Hexagon } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
-import AppLogo from '../assets/images/app-logo.jpg';
 
 const SplashScreen: React.FC = () => {
   const { t } = useLanguage();
+  // Using direct path to avoid build errors if file is missing or outside src
+  const AppLogo = "./assets/images/app-logo.jpg"; 
+
   return (
     <div className="fixed inset-0 z-[9999] bg-white dark:bg-black flex flex-col items-center justify-between pb-10 pt-safe">
       
