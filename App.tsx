@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import Header from './components/Header';
 import CreatePostBar from './components/CreatePostBar';
@@ -147,6 +146,7 @@ const AppContent: React.FC = () => {
 
   // Story Upload State & Preview
   const [isUploadingStory, setIsUploadingStory] = useState(false);
+  const [storyUploadProgress, setStoryUploadProgress] = useState(0); // Added for progress bar
   const [pendingStory, setPendingStory] = useState<{ type: 'text'|'image'|'video', content: string, color?: string } | null>(null);
 
   const [currentLocation, setCurrentLocation] = useState<{ country: string; city: string | null }>({ country: 'عام', city: null });
@@ -441,6 +441,7 @@ const AppContent: React.FC = () => {
       
       // 2. Set Upload State IMMEDIATELY
       setIsUploadingStory(true);
+      setStoryUploadProgress(0); // Initialize Progress
       
       // 3. Set Preview IMMEDIATELY (even for videos)
       if (storyPayload.type === 'text') {
@@ -454,6 +455,14 @@ const AppContent: React.FC = () => {
 
       // 4. Force Stories component to re-render to show the pending bubble
       setStoriesRefreshKey(prev => prev + 1);
+
+      // Simulated Progress Logic
+      const progressInterval = setInterval(() => {
+          setStoryUploadProgress(prev => {
+              if (prev >= 90) return prev;
+              return prev + (Math.random() * 5); // Increment slowly
+          });
+      }, 300);
 
       // 5. Start Background Upload
       try {
@@ -490,14 +499,20 @@ const AppContent: React.FC = () => {
               body: formData
           });
 
+          clearInterval(progressInterval); // Stop simulation
+
           if (!response.ok) {
               const errorData = await response.json().catch(() => ({}));
               throw new Error(errorData.message || errorData.msg || "Story creation failed");
           }
+          
+          setStoryUploadProgress(100); // Complete
 
       } catch (error: any) {
           console.error(error);
           alert(error.message || t('story_upload_error'));
+          clearInterval(progressInterval);
+          setStoryUploadProgress(0);
       } finally {
           setIsUploadingStory(false);
           setPendingStory(null); 
@@ -581,6 +596,7 @@ const AppContent: React.FC = () => {
                   onCreateStory={() => setIsCreateStoryOpen(true)} 
                   refreshKey={storiesRefreshKey} 
                   isUploading={isUploadingStory}
+                  uploadProgress={storyUploadProgress}
                   pendingStory={pendingStory} 
               />
               {isLoading ? (

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Plus, X, Trash2, Eye, Loader2, Image as ImageIcon } from 'lucide-react';
@@ -11,6 +10,7 @@ interface StoriesProps {
   onCreateStory?: () => void;
   refreshKey?: number;
   isUploading?: boolean;
+  uploadProgress?: number;
   pendingStory?: { type: 'text'|'image'|'video', content: string, color?: string } | null;
 }
 
@@ -89,7 +89,7 @@ const StoryThumbnail = ({ src, type, alt }: { src: string; type: string; alt: st
   );
 };
 
-const Stories: React.FC<StoriesProps> = ({ onCreateStory, refreshKey, isUploading = false, pendingStory }) => {
+const Stories: React.FC<StoriesProps> = ({ onCreateStory, refreshKey, isUploading = false, uploadProgress = 0, pendingStory }) => {
   const { t, language } = useLanguage();
   const [storyGroups, setStoryGroups] = useState<StoryGroup[]>([]);
   const [loading, setLoading] = useState(true);
@@ -584,12 +584,34 @@ const Stories: React.FC<StoriesProps> = ({ onCreateStory, refreshKey, isUploadin
                             )}
                         </div>
                         <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-30">
-                             <div className="bg-white/20 backdrop-blur-sm rounded-full p-2">
-                                <Loader2 size={24} className="text-white animate-spin" />
+                             <div className="relative w-12 h-12 flex items-center justify-center">
+                                {/* SVG Circular Progress */}
+                                <svg className="transform -rotate-90 w-12 h-12">
+                                    <circle
+                                        cx="24"
+                                        cy="24"
+                                        r="18"
+                                        stroke="rgba(255,255,255,0.3)"
+                                        strokeWidth="3"
+                                        fill="transparent"
+                                    />
+                                    <circle
+                                        cx="24"
+                                        cy="24"
+                                        r="18"
+                                        stroke="#3b82f6" 
+                                        strokeWidth="3"
+                                        fill="transparent"
+                                        strokeDasharray={113} 
+                                        strokeDashoffset={113 - (uploadProgress / 100) * 113}
+                                        strokeLinecap="round"
+                                        className="transition-all duration-300 ease-out"
+                                    />
+                                </svg>
                              </div>
                         </div>
                         <span className="absolute bottom-2 right-2 text-white font-bold text-[10px] drop-shadow-md z-40">
-                            {t('sending')}
+                            {t('sending')} {Math.round(uploadProgress)}%
                         </span>
                      </>
                  ) : myLatestStory ? (
