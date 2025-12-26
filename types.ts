@@ -45,6 +45,10 @@ export interface Story {
     url: string;
     type: 'image' | 'video';
   };
+  trimData?: {
+    start: number;
+    end: number;
+  };
   createdAt: string;
   views?: Array<{
     user: User | string;

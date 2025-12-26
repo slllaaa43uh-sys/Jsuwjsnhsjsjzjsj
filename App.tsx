@@ -145,6 +145,10 @@ const AppContent: React.FC = () => {
     errorMsg?: string;
   }>({ isActive: false, status: 'compressing', progress: 0, thumbnail: null });
 
+  // Story Upload State & Preview
+  const [isUploadingStory, setIsUploadingStory] = useState(false);
+  const [pendingStory, setPendingStory] = useState<{ type: 'text'|'image'|'video', content: string, color?: string } | null>(null);
+
   const [currentLocation, setCurrentLocation] = useState<{ country: string; city: string | null }>({ country: 'عام', city: null });
 
   // --- COMPREHENSIVE LOGOUT HANDLER ---
@@ -431,7 +435,76 @@ const AppContent: React.FC = () => {
     performBackgroundUpload();
   };
 
-  const handleStoryPost = () => setStoriesRefreshKey(prev => prev + 1);
+  const handleStoryPost = async (storyPayload: any) => {
+      // 1. Close Modal IMMEDIATELY
+      setIsCreateStoryOpen(false);
+      
+      // 2. Set Upload State IMMEDIATELY
+      setIsUploadingStory(true);
+      
+      // 3. Set Preview IMMEDIATELY (even for videos)
+      if (storyPayload.type === 'text') {
+          setPendingStory({ type: 'text', content: storyPayload.text, color: storyPayload.backgroundColor });
+      } else if (storyPayload.file) {
+          const file = storyPayload.file;
+          const url = URL.createObjectURL(file);
+          const type = file.type.startsWith('video') ? 'video' : 'image';
+          setPendingStory({ type, content: url });
+      }
+
+      // 4. Force Stories component to re-render to show the pending bubble
+      setStoriesRefreshKey(prev => prev + 1);
+
+      // 5. Start Background Upload
+      try {
+          const token = localStorage.getItem('token');
+          const formData = new FormData();
+
+          if (storyPayload.type === 'text') {
+              formData.append('text', storyPayload.text || '');
+              if (storyPayload.backgroundColor) {
+                  formData.append('backgroundColor', storyPayload.backgroundColor);
+              }
+          } else if (storyPayload.type === 'media' && storyPayload.file) {
+              // Append file directly
+              formData.append('file', storyPayload.file);
+              
+              // Optional text/caption
+              if (storyPayload.text) {
+                  formData.append('text', storyPayload.text);
+              }
+
+              // Trim Data (Critical Fix)
+              if (storyPayload.trimData) {
+                  formData.append('trimStart', storyPayload.trimData.start.toString());
+                  formData.append('trimEnd', storyPayload.trimData.end.toString());
+              }
+          }
+
+          const response = await fetch(`${API_BASE_URL}/api/v1/stories`, {
+              method: 'POST',
+              headers: {
+                  'Authorization': `Bearer ${token}`
+                  // No Content-Type header so browser sets multipart/form-data boundary
+              },
+              body: formData
+          });
+
+          if (!response.ok) {
+              const errorData = await response.json().catch(() => ({}));
+              throw new Error(errorData.message || errorData.msg || "Story creation failed");
+          }
+
+      } catch (error: any) {
+          console.error(error);
+          alert(error.message || t('story_upload_error'));
+      } finally {
+          setIsUploadingStory(false);
+          setPendingStory(null); 
+          setStoriesRefreshKey(prev => prev + 1); // Refresh to show real story
+      }
+  };
+
   const handleOpenNotifications = () => { setIsNotificationsOpen(true); setUnreadNotificationsCount(0); };
 
   useEffect(() => {
@@ -504,7 +577,12 @@ const AppContent: React.FC = () => {
                   <CreatePostBar onOpen={() => setIsCreateModalOpen(true)} />
                 </div>
               )}
-              <Stories onCreateStory={() => setIsCreateStoryOpen(true)} refreshKey={storiesRefreshKey} />
+              <Stories 
+                  onCreateStory={() => setIsCreateStoryOpen(true)} 
+                  refreshKey={storiesRefreshKey} 
+                  isUploading={isUploadingStory}
+                  pendingStory={pendingStory} 
+              />
               {isLoading ? (
                 <div className="flex flex-col mt-2">{[1, 2, 3].map(i => <div key={i} className="bg-white mb-3 shadow-sm py-4 px-4 relative overflow-hidden"><div className="animate-pulse flex flex-col gap-4"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-full bg-gray-200 shrink-0"></div><div className="flex-1 space-y-2"><div className="h-2.5 bg-gray-200 rounded w-1/4"></div><div className="h-2 bg-gray-100 rounded w-1/6"></div></div></div><div className="space-y-3 pt-2"><div className="h-2.5 bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 rounded-full w-full"></div><div className="h-2.5 bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 rounded-full w-[95%]"></div><div className="h-2.5 bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 rounded-full w-[90%]"></div><div className="h-2.5 bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 rounded-full w-[60%]"></div></div></div></div>)}</div>
               ) : (

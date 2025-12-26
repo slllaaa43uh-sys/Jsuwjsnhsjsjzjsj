@@ -1,7 +1,7 @@
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Plus, X, Trash2, Eye, Loader2 } from 'lucide-react';
+import { Plus, X, Trash2, Eye, Loader2, Image as ImageIcon } from 'lucide-react';
 import Avatar from './Avatar';
 import { API_BASE_URL } from '../constants';
 import { Story, StoryGroup } from '../types';
@@ -10,6 +10,8 @@ import { useLanguage } from '../contexts/LanguageContext';
 interface StoriesProps {
   onCreateStory?: () => void;
   refreshKey?: number;
+  isUploading?: boolean;
+  pendingStory?: { type: 'text'|'image'|'video', content: string, color?: string } | null;
 }
 
 interface Viewer {
@@ -21,41 +23,73 @@ interface Viewer {
   viewedAt: string;
 }
 
-// --- THUMBNAIL COMPONENT (For Feed List) ---
-const StoryThumbnail = ({ src, type, alt }: { src: string; type: 'image' | 'video'; alt: string }) => {
+// --- THUMBNAIL COMPONENT ---
+const StoryThumbnail = ({ src, type, alt }: { src: string; type: string; alt: string }) => {
   const [isLoaded, setIsLoaded] = useState(false);
+  const [hasError, setHasError] = useState(false);
+  
+  useEffect(() => {
+    setIsLoaded(false);
+    setHasError(false);
+  }, [src]);
 
-  return (
-    <div className="w-full h-full relative bg-gray-200">
-      {!isLoaded && (
-        <div className="absolute inset-0 bg-gray-300 animate-pulse z-10" />
-      )}
-      {type === 'video' ? (
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const isVideo = 
+    (type && (type === 'video' || (typeof type === 'string' && type.toLowerCase().includes('video')))) || 
+    (src && (src.endsWith('.mp4') || src.endsWith('.mov') || src.endsWith('.webm') || src.startsWith('blob:')));
+
+  useEffect(() => {
+    if (isVideo && videoRef.current) {
+        videoRef.current.defaultMuted = true;
+        videoRef.current.muted = true;
+        // Try to play to get a frame, then pause if needed, but for thumbnail we just let it load
+        videoRef.current.play().catch(() => {});
+    }
+  }, [isVideo, src]);
+
+  if (hasError) {
+    return (
+      <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+         <ImageIcon className="text-gray-400 opacity-50" size={24} />
+      </div>
+    );
+  }
+
+  if (isVideo) {
+    return (
+      <div className="w-full h-full relative bg-black">
         <video 
-          src={`${src}#t=0.1`} 
-          className={`w-full h-full object-cover pointer-events-none transition-opacity duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'}`} 
+          ref={videoRef}
+          src={src} 
+          className="w-full h-full object-cover pointer-events-none" 
           muted 
           playsInline 
-          preload="metadata"
+          autoPlay
+          loop
           disablePictureInPicture
           controls={false}
           onLoadedData={() => setIsLoaded(true)}
-          onError={() => setIsLoaded(true)}
+          onError={() => setHasError(true)}
         />
-      ) : (
-        <img 
-          src={src} 
-          alt={alt}
-          className={`w-full h-full object-cover transition-opacity duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
-          onLoad={() => setIsLoaded(true)}
-          onError={() => setIsLoaded(true)}
-        />
-      )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full h-full relative bg-gray-200">
+      <img 
+        src={src} 
+        alt={alt}
+        className={`w-full h-full object-cover transition-opacity duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+        onLoad={() => setIsLoaded(true)}
+        onError={() => setHasError(true)}
+      />
     </div>
   );
 };
 
-const Stories: React.FC<StoriesProps> = ({ onCreateStory, refreshKey }) => {
+const Stories: React.FC<StoriesProps> = ({ onCreateStory, refreshKey, isUploading = false, pendingStory }) => {
   const { t, language } = useLanguage();
   const [storyGroups, setStoryGroups] = useState<StoryGroup[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,6 +104,7 @@ const Stories: React.FC<StoriesProps> = ({ onCreateStory, refreshKey }) => {
   // Video States
   const [isBuffering, setIsBuffering] = useState(true); 
   const [isVideoPlaying, setIsVideoPlaying] = useState(false); 
+  const [isVideoVisible, setIsVideoVisible] = useState(false); // To prevent flash
   
   // Viewers List State
   const [isViewersModalOpen, setIsViewersModalOpen] = useState(false);
@@ -83,8 +118,9 @@ const Stories: React.FC<StoriesProps> = ({ onCreateStory, refreshKey }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const progressTimerRef = useRef<any>(null);
   const startTimeRef = useRef<number>(0);
+  const isTransitioningRef = useRef(false); // CRITICAL: Prevents double skipping
+  
   const currentUserId = localStorage.getItem('userId');
-
   const myName = localStorage.getItem('userName') || 'مستخدم';
   const myAvatar = localStorage.getItem('userAvatar');
 
@@ -187,24 +223,33 @@ const Stories: React.FC<StoriesProps> = ({ onCreateStory, refreshKey }) => {
       } catch (error) { console.error(error); } finally { setLoading(false); }
     };
     fetchStories();
-  }, [refreshKey, currentUserId, myName, myAvatar]);
+  }, [refreshKey, currentUserId, myName, myAvatar, isUploading]);
 
-  const handleCreateClick = () => { if (onCreateStory) onCreateStory(); };
+  const handleCreateClick = (e: React.MouseEvent) => { 
+      e.stopPropagation();
+      if (onCreateStory) onCreateStory(); 
+  };
 
-  // --- STORY NAVIGATION & OPENING ---
   const openViewer = async (groupIndex: number) => {
+    const group = storyGroups[groupIndex];
+    if (!group || !group.stories.length) return;
+
+    if (isUploading && groupIndex === 0 && group.stories.length === 0) return;
+
     window.dispatchEvent(new CustomEvent('story-viewer-toggle', { detail: { isOpen: true } }));
     setActiveGroupIndex(groupIndex);
     setActiveStoryIndex(0); 
     setViewerOpen(true);
     setProgress(0);
     setIsPaused(false);
+    isTransitioningRef.current = false;
     
-    // IMMEDIATE RESET FOR SMOOTH OPENING
     setIsVideoPlaying(false);
     setIsBuffering(true);
+    setIsVideoVisible(false); // Hide video initially
     
-    const group = storyGroups[groupIndex];
+    if (isUploading && groupIndex === 0) return;
+
     const userId = getUserId(group.user);
     const token = localStorage.getItem('token');
     
@@ -217,8 +262,10 @@ const Stories: React.FC<StoriesProps> = ({ onCreateStory, refreshKey }) => {
         if (Array.isArray(fullStories)) {
             fullStories.sort((a: Story, b: Story) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
             const mappedStories = fullStories.map((s:any) => ({ ...s, user: s.user || group.user }));
-            updatedGroups[groupIndex].stories = mappedStories;
-            setStoryGroups(updatedGroups);
+            if (updatedGroups[groupIndex]) {
+               updatedGroups[groupIndex].stories = mappedStories;
+               setStoryGroups(updatedGroups);
+            }
         }
       }
     } catch (error) { console.error(error); }
@@ -233,234 +280,361 @@ const Stories: React.FC<StoriesProps> = ({ onCreateStory, refreshKey }) => {
     setIsPaused(false);
     setIsBuffering(false);
     setIsVideoPlaying(false);
+    setIsVideoVisible(false);
     setIsDeleteModalOpen(false);
     setIsViewersModalOpen(false);
+    isTransitioningRef.current = false;
     if (progressTimerRef.current) clearInterval(progressTimerRef.current);
   };
 
-  // --- RESET STATE ON SLIDE CHANGE ---
-  useEffect(() => {
-      // Whenever story index changes, INSTANTLY reset video state
+  // Reset video state when story changes
+  useEffect(() => { 
       setIsVideoPlaying(false); 
-      setIsBuffering(true);
+      setIsBuffering(true); 
+      setIsVideoVisible(false); 
+      isTransitioningRef.current = false;
   }, [activeStoryIndex, activeGroupIndex]);
 
   const handleDeleteClick = () => { setIsPaused(true); setIsDeleteModalOpen(true); };
-
+  
   const handleConfirmDelete = async () => {
-    setIsDeleting(true);
-    const currentGroup = storyGroups[activeGroupIndex];
-    const currentStory = currentGroup?.stories[activeStoryIndex];
-    if (!currentStory) { setIsDeleting(false); setIsDeleteModalOpen(false); return; }
-    
-    try {
-       const token = localStorage.getItem('token');
-       const response = await fetch(`${API_BASE_URL}/api/v1/stories/${currentStory._id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-       if (response.ok) {
-           const newGroups = [...storyGroups];
-           const group = newGroups[activeGroupIndex];
-           group.stories.splice(activeStoryIndex, 1);
-           if (group.stories.length === 0) {
-              newGroups.splice(activeGroupIndex, 1);
-              setStoryGroups(newGroups);
-              closeViewer();
-           } else {
-               setStoryGroups(newGroups);
-               if (activeStoryIndex >= group.stories.length) {
-                   setActiveStoryIndex(Math.max(0, group.stories.length - 1));
-                   setProgress(0);
-               } else {
-                   setProgress(0);
-               }
-               setIsPaused(false);
-           }
-           setIsDeleteModalOpen(false);
-       }
-    } catch (e) { setIsDeleteModalOpen(false); } finally { setIsDeleting(false); }
+      setIsDeleting(true);
+      const currentGroup = storyGroups[activeGroupIndex];
+      const currentStory = currentGroup?.stories[activeStoryIndex];
+      if (!currentStory) return;
+
+      const token = localStorage.getItem('token');
+      
+      try {
+          const response = await fetch(`${API_BASE_URL}/api/v1/stories/${currentStory._id}`, {
+              method: 'DELETE',
+              headers: { 'Authorization': `Bearer ${token}` }
+          });
+          
+          if (response.ok) {
+              const updatedStories = currentGroup.stories.filter(s => s._id !== currentStory._id);
+              if (updatedStories.length === 0) {
+                  closeViewer();
+                  setStoryGroups(prev => prev.filter((_, i) => i !== activeGroupIndex));
+              } else {
+                  const updatedGroups = [...storyGroups];
+                  updatedGroups[activeGroupIndex].stories = updatedStories;
+                  setStoryGroups(updatedGroups);
+                  // Safety check for index
+                  if (activeStoryIndex >= updatedStories.length) {
+                      setActiveStoryIndex(Math.max(0, updatedStories.length - 1));
+                  }
+                  setIsDeleteModalOpen(false);
+                  setIsPaused(false);
+              }
+          }
+      } catch (e) {
+          console.error(e);
+      } finally {
+          setIsDeleting(false);
+      }
   };
 
   const handleShowViewers = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsPaused(true);
-    const currentGroup = storyGroups[activeGroupIndex];
-    const currentStory = currentGroup?.stories[activeStoryIndex];
-    if (!currentStory) return;
-    setIsViewersModalOpen(true);
-    setIsLoadingViewers(true);
-    setViewersList([]);
-    try {
-        const token = localStorage.getItem('token');
-        const res = await fetch(`${API_BASE_URL}/api/v1/stories/${currentStory._id}/viewers`, { headers: { 'Authorization': `Bearer ${token}` } });
-        if (res.ok) {
-            const data = await res.json();
-            const list = Array.isArray(data) ? data : (data.viewers || []);
-            setViewersList(list);
-        }
-    } catch (e) { console.error(e); } finally { setIsLoadingViewers(false); }
-  };
-
-  // Video Events
-  const onVideoTimeUpdate = () => {
-    if (videoRef.current && !isPaused && !isBuffering) {
-       const duration = videoRef.current.duration;
-       const currentTime = videoRef.current.currentTime;
-       if (duration > 0) setProgress((currentTime / duration) * 100);
-    }
-  };
-
-  const onVideoEnded = () => handleNext();
-  const onVideoWaiting = () => setIsBuffering(true);
-  
-  // CRITICAL: Only hide the black curtain when playing effectively starts
-  const onVideoPlaying = () => {
-      setIsBuffering(false);
-      setIsVideoPlaying(true); 
-  };
-
-  const recordView = async (storyId: string) => {
-    if (!storyId) return;
-    try {
-        const token = localStorage.getItem('token');
-        if (!token) return;
-        await fetch(`${API_BASE_URL}/api/v1/stories/${storyId}/view`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
-    } catch (e) { console.error("Failed view", e); }
-  };
-
-  // Timer Logic
-  useEffect(() => {
-    if (!viewerOpen) return;
-    const currentGroup = storyGroups[activeGroupIndex];
-    if (!currentGroup?.stories.length) { closeViewer(); return; }
-    
-    const currentStory = currentGroup.stories[activeStoryIndex];
-    const isVideo = currentStory.media?.type === 'video';
-    
-    if (progressTimerRef.current) clearInterval(progressTimerRef.current);
-
-    if (!currentGroup.isUser && currentStory._id) {
-       const viewedKey = `viewed_story_${currentStory._id}`;
-       if (!sessionStorage.getItem(viewedKey)) {
-           recordView(currentStory._id);
-           sessionStorage.setItem(viewedKey, 'true');
-       }
-    }
-
-    if (isVideo) {
-        if (progress === 100) setProgress(0);
-        if (videoRef.current) {
-            isPaused ? videoRef.current.pause() : videoRef.current.play().catch(() => {});
-        }
-    } else {
-        // Image logic: Immediate show
-        setIsBuffering(false);
-        setIsVideoPlaying(true); 
-        
-        const duration = 5000;
-        if (!isPaused) {
-           if (progress === 0 || progress >= 100) {
-               startTimeRef.current = Date.now();
-               setProgress(0);
-           } else {
-               const elapsed = (progress / 100) * duration;
-               startTimeRef.current = Date.now() - elapsed;
-           }
-
-           progressTimerRef.current = setInterval(() => {
-                const now = Date.now();
-                const elapsed = now - startTimeRef.current;
-                const pct = Math.min((elapsed / duration) * 100, 100);
-                setProgress(pct);
-                if (pct >= 100) { clearInterval(progressTimerRef.current); handleNext(); }
-            }, 50);
-        }
-    }
-    return () => clearInterval(progressTimerRef.current);
-  }, [viewerOpen, activeGroupIndex, activeStoryIndex, storyGroups, isPaused]);
-
-  const handleNext = () => {
-     const currentGroup = storyGroups[activeGroupIndex];
-     if (activeStoryIndex < currentGroup.stories.length - 1) {
-         setActiveStoryIndex(prev => prev + 1);
-         setProgress(0);
-     } else {
-         if (activeGroupIndex < storyGroups.length - 1) {
-             setActiveGroupIndex(prev => prev + 1);
-             setActiveStoryIndex(0);
-             setProgress(0);
-         } else {
-             closeViewer();
-         }
-     }
-  };
-
-  const handlePrev = () => {
+      e.stopPropagation();
+      setIsPaused(true);
+      setIsViewersModalOpen(true);
+      setIsLoadingViewers(true);
+      
       const currentGroup = storyGroups[activeGroupIndex];
       const currentStory = currentGroup?.stories[activeStoryIndex];
-      const isVideo = currentStory?.media?.type === 'video';
+      if (!currentStory) return;
 
-      if (isVideo && videoRef.current && videoRef.current.currentTime > 2) {
-          videoRef.current.currentTime = 0;
-          return;
-      }
-      if (!isVideo && progress > 10) {
-          setProgress(0);
-          startTimeRef.current = Date.now();
-          return;
-      }
+      const token = localStorage.getItem('token');
 
-      if (activeStoryIndex > 0) {
-          setActiveStoryIndex(prev => prev - 1);
-          setProgress(0);
-      } else {
-          if (activeGroupIndex > 0) {
-              setActiveGroupIndex(prev => prev - 1);
-              setActiveStoryIndex(0); 
-              setProgress(0);
-          } else {
-              setProgress(0);
-              startTimeRef.current = Date.now();
+      try {
+          if (currentStory.views && currentStory.views.length > 0 && typeof currentStory.views[0] !== 'string') {
+              setViewersList(currentStory.views as any[]);
+              setIsLoadingViewers(false);
+              return;
           }
+
+          const response = await fetch(`${API_BASE_URL}/api/v1/stories/${currentStory._id}`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+          });
+          
+          if (response.ok) {
+              const data = await response.json();
+              const storyData = data.story || data;
+              if (storyData.views) {
+                  setViewersList(storyData.views);
+              } else {
+                  setViewersList([]);
+              }
+          }
+      } catch (e) {
+          console.error(e);
+          setViewersList([]);
+      } finally {
+          setIsLoadingViewers(false);
       }
   };
 
   const currentGroup = storyGroups[activeGroupIndex];
-  const currentStory = currentGroup?.stories[activeStoryIndex];
+  const currentStory = currentGroup?.stories?.[activeStoryIndex];
+
+  // --- TRANSITION LOGIC ---
+  const handleNext = useCallback(() => { 
+      if (isTransitioningRef.current) return;
+      isTransitioningRef.current = true;
+
+      const currentGroup = storyGroups[activeGroupIndex]; 
+      if (!currentGroup) { closeViewer(); return; }
+
+      if (activeStoryIndex < currentGroup.stories.length - 1) { 
+          setActiveStoryIndex(prev => prev + 1); 
+          setProgress(0); 
+      } else { 
+          if (activeGroupIndex < storyGroups.length - 1) { 
+              setActiveGroupIndex(prev => prev + 1); 
+              setActiveStoryIndex(0); 
+              setProgress(0); 
+          } else { 
+              closeViewer(); 
+          } 
+      } 
+  }, [activeStoryIndex, activeGroupIndex, storyGroups]);
+
+  const handlePrev = useCallback(() => { 
+      if (isTransitioningRef.current) return;
+      isTransitioningRef.current = true;
+
+      if (activeStoryIndex > 0) { 
+          setActiveStoryIndex(prev => prev - 1); 
+          setProgress(0); 
+      } else if (activeGroupIndex > 0) { 
+          const prevGroup = storyGroups[activeGroupIndex - 1];
+          setActiveGroupIndex(prev => prev - 1); 
+          setActiveStoryIndex(prevGroup.stories.length - 1); 
+          setProgress(0); 
+      } else { 
+          closeViewer(); 
+      } 
+  }, [activeStoryIndex, activeGroupIndex, storyGroups]);
+
+  // --- TRIM & PLAYBACK LOGIC ---
+  const onVideoTimeUpdate = () => { 
+      if (videoRef.current && !isPaused && !isBuffering) { 
+          const currentTime = videoRef.current.currentTime;
+          
+          const start = (currentStory as any)?.trimData?.start ?? (currentStory as any)?.trimStart ?? 0;
+          const end = (currentStory as any)?.trimData?.end ?? (currentStory as any)?.trimEnd ?? videoRef.current.duration;
+          
+          // Trimming Logic: End video if we passed the trim end
+          if (currentTime >= end) {
+              videoRef.current.pause();
+              handleNext();
+              return;
+          }
+
+          // Safety: Correct time if it drifted before start
+          if (currentTime < start) {
+              videoRef.current.currentTime = start;
+          }
+
+          const totalDuration = Math.max(0.1, end - start);
+          const elapsed = Math.max(0, currentTime - start);
+          const percent = Math.min(100, (elapsed / totalDuration) * 100);
+          setProgress(percent); 
+      } 
+  };
+
+  const onVideoLoadedMetadata = () => {
+      if (videoRef.current) {
+          const start = (currentStory as any)?.trimData?.start ?? (currentStory as any)?.trimStart ?? 0;
+          // Set start time immediately to avoid flash of frame 0
+          videoRef.current.currentTime = start;
+          setIsVideoVisible(true); // Show video only after seeking to correct start
+          
+          if (!isPaused) {
+              videoRef.current.play().catch(() => {});
+          }
+      }
+  };
+
+  const onVideoPlay = () => {
+      setIsBuffering(false);
+      setIsVideoPlaying(true);
+  };
+
+  const onVideoEnded = () => {
+      // Primary handler is onTimeUpdate for trimming, but this catches full plays
+      handleNext();
+  };
+  
+  const onVideoWaiting = () => setIsBuffering(true);
+  
+  const recordView = async (storyId: string) => {
+      const token = localStorage.getItem('token');
+      try {
+          await fetch(`${API_BASE_URL}/api/v1/stories/${storyId}/view`, {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${token}` }
+          });
+      } catch (e) { console.error(e); }
+  };
+  
+  // MAIN EFFECT FOR STORY PLAYBACK
+  useEffect(() => {
+    if (!viewerOpen) return;
+    const currentGroup = storyGroups[activeGroupIndex];
+    if (!currentGroup?.stories?.length) { closeViewer(); return; }
+    
+    const currentStory = currentGroup.stories[activeStoryIndex];
+    if (!currentStory) return; 
+
+    const isVideo = currentStory.media?.type === 'video' || (typeof currentStory.media?.type === 'string' && currentStory.media.type.includes('video'));
+    
+    if (progressTimerRef.current) clearInterval(progressTimerRef.current);
+    
+    // Mark as viewed
+    if (!currentGroup.isUser && currentStory._id) { 
+        const viewedKey = `viewed_story_${currentStory._id}`; 
+        if (!sessionStorage.getItem(viewedKey)) { 
+            recordView(currentStory._id); 
+            sessionStorage.setItem(viewedKey, 'true'); 
+        } 
+    }
+    
+    if (isVideo) { 
+        setProgress(0);
+        // Video logic is handled by event listeners on the <video> tag
+        // We do NOT seek here, we seek in onLoadedMetadata to avoid race conditions
+    } else { 
+        // IMAGE LOGIC
+        setIsBuffering(false); 
+        setIsVideoPlaying(true); 
+        const duration = 5000; 
+        if (!isPaused) { 
+            if (progress === 0 || progress >= 100) { 
+                startTimeRef.current = Date.now(); 
+                setProgress(0); 
+            } else { 
+                const elapsed = (progress / 100) * duration; 
+                startTimeRef.current = Date.now() - elapsed; 
+            } 
+            progressTimerRef.current = setInterval(() => { 
+                const now = Date.now(); 
+                const elapsed = now - startTimeRef.current; 
+                const pct = Math.min((elapsed / duration) * 100, 100); 
+                setProgress(pct); 
+                if (pct >= 100) { 
+                    clearInterval(progressTimerRef.current); 
+                    handleNext(); 
+                } 
+            }, 50); 
+        } 
+    }
+    return () => clearInterval(progressTimerRef.current);
+  }, [viewerOpen, activeGroupIndex, activeStoryIndex, storyGroups, isPaused, handleNext]);
+
+  // --- SAFE USER PREVIEW LOGIC ---
+  const myStoryGroup = storyGroups.find(g => g.isUser);
+  const myLatestStory = myStoryGroup?.stories?.[myStoryGroup.stories.length - 1];
+  const userHasStories = !!myLatestStory;
 
   return (
     <>
       <div className="bg-white py-4 mb-2 overflow-x-auto no-scrollbar">
         <div className="flex gap-2 px-3 min-w-max">
-          <div onClick={handleCreateClick} className="relative w-24 h-40 flex-shrink-0 rounded-xl overflow-hidden cursor-pointer group border border-gray-100 shadow-sm transition-all active:scale-95">
+          
+          {/* Create Story Button */}
+          <div 
+            onClick={handleCreateClick}
+            className="relative w-24 h-40 flex-shrink-0 rounded-xl overflow-hidden cursor-pointer group border border-gray-100 shadow-sm bg-gray-50 transition-transform active:scale-95"
+          >
              <div className="h-3/4 w-full relative bg-gray-50">
                 <Avatar name={myName} src={myAvatar ? (myAvatar.startsWith('http') ? myAvatar : getMediaUrl(myAvatar)) : null} className="w-full h-full rounded-none object-cover" textClassName="text-2xl" />
                 <div className="absolute inset-0 bg-black/5 group-hover:bg-black/0 transition-colors" />
              </div>
              <div className="h-1/4 w-full bg-white relative">
-                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-600 rounded-full p-0.5 border-2 border-white">
-                     <Plus size={16} className="text-white" strokeWidth={3} />
-                 </div>
-                 <div className="w-full h-full flex items-end justify-center pb-1.5">
-                     <span className="text-[10px] font-bold text-gray-900">{t('create_story')}</span>
-                 </div>
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-600 rounded-full p-0.5 border-2 border-white z-10">
+                    <Plus size={16} className="text-white" strokeWidth={3} />
+                </div>
+                <div className="w-full h-full flex items-end justify-center pb-1.5">
+                    <span className="text-[10px] font-bold text-gray-900">{t('create_story')}</span>
+                </div>
              </div>
           </div>
 
-          {storyGroups.map((group, idx) => {
-             const isMe = group.isUser;
-             const displayName = group.user.name || (isMe ? myName : 'مستخدم');
-             const displayAvatar = group.user.avatar || (isMe ? myAvatar : null);
-             const count = group.stories.length;
-             const latestStory = group.stories[group.stories.length - 1];
-             const hasMedia = latestStory?.media && latestStory.media.url;
-             const mediaUrl = getMediaUrl(latestStory.media?.url);
+          {/* User's Story Preview */}
+          {(isUploading || userHasStories) && (
+             <div 
+               onClick={() => !isUploading && openViewer(0)} 
+               className="relative w-24 h-40 flex-shrink-0 rounded-xl overflow-hidden cursor-pointer group border border-gray-100 shadow-sm transition-transform active:scale-95 bg-gray-100"
+             >
+                 {isUploading && pendingStory ? (
+                     <>
+                        <div className="absolute inset-0 w-full h-full">
+                            {pendingStory.type === 'text' ? (
+                                <div className={`w-full h-full ${pendingStory.color || 'bg-blue-500'} flex items-center justify-center`}>
+                                    <p className="text-white text-[8px] px-1 truncate">{pendingStory.content}</p>
+                                </div>
+                            ) : (
+                                <StoryThumbnail 
+                                    src={pendingStory.content} 
+                                    type={pendingStory.type} 
+                                    alt="preview" 
+                                />
+                            )}
+                        </div>
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-30">
+                             <div className="bg-white/20 backdrop-blur-sm rounded-full p-2">
+                                <Loader2 size={24} className="text-white animate-spin" />
+                             </div>
+                        </div>
+                        <span className="absolute bottom-2 right-2 text-white font-bold text-[10px] drop-shadow-md z-40">
+                            {t('sending')}
+                        </span>
+                     </>
+                 ) : myLatestStory ? (
+                     <>
+                        <div className="absolute inset-0 w-full h-full">
+                            {myLatestStory.media?.url ? (
+                                <StoryThumbnail 
+                                    src={getMediaUrl(myLatestStory.media.url)} 
+                                    type={myLatestStory.media.type || 'image'} 
+                                    alt={myName} 
+                                />
+                            ) : (
+                                <div className={`w-full h-full ${myLatestStory.backgroundColor || 'bg-blue-500'} flex items-center justify-center`}>
+                                    <p className="text-white text-[8px] px-1 truncate">{myLatestStory.text}</p>
+                                </div>
+                            )}
+                        </div>
+                        <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60" />
+                        <div className="absolute top-2 left-2 p-0.5 rounded-full border-2 border-blue-500 z-10 bg-transparent">
+                            <Avatar name={myName} src={myAvatar ? (myAvatar.startsWith('http') ? myAvatar : getMediaUrl(myAvatar)) : null} className="w-8 h-8 rounded-full border border-white" textClassName="text-[10px]" />
+                        </div>
+                        <span className="absolute bottom-2 right-2 text-white font-bold text-[10px] drop-shadow-md z-10 truncate max-w-[90%] text-right leading-tight">
+                            {t('your_story')}
+                        </span>
+                     </>
+                 ) : null}
+             </div>
+          )}
 
-             if (count === 0) return null;
+          {/* Other Users' Stories */}
+          {storyGroups.map((group, idx) => {
+             if (group.isUser) return null;
+             const displayName = group.user.name;
+             const displayAvatar = group.user.avatar;
+             const latestStory = group.stories[group.stories.length - 1];
+             if (!latestStory) return null;
+
+             const hasMedia = latestStory.media && latestStory.media.url;
+             const mediaUrl = hasMedia ? getMediaUrl(latestStory.media?.url) : '';
 
              return (
-              <div key={group.user.id || idx} onClick={() => openViewer(idx)} className="relative w-24 h-40 flex-shrink-0 rounded-xl overflow-hidden cursor-pointer group shadow-sm border border-gray-100 transition-transform active:scale-95 bg-gray-100">
+              <div key={group.user.id || idx} onClick={() => openViewer(idx)} className="relative w-24 h-40 flex-shrink-0 rounded-xl overflow-hidden cursor-pointer group shadow-sm border border-gray-100 transition-transform active:scale-95 bg-gray-100" >
                  <div className="absolute inset-0 w-full h-full transition-transform duration-700 group-hover:scale-105">
                      {hasMedia ? (
-                        <StoryThumbnail src={mediaUrl} type={latestStory.media?.type as 'image' | 'video'} alt={displayName} />
+                        <StoryThumbnail src={mediaUrl} type={latestStory.media?.type as string} alt={displayName} />
                      ) : (
                         <div className={`w-full h-full ${latestStory.backgroundColor || 'bg-gradient-to-br from-blue-500 to-purple-600'} flex items-center justify-center p-2`}>
                             <p className="text-white text-[8px] line-clamp-4 text-center">{latestStory.text}</p>
@@ -468,11 +642,11 @@ const Stories: React.FC<StoriesProps> = ({ onCreateStory, refreshKey }) => {
                      )}
                  </div>
                  <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/70" />
-                 <div className={`absolute top-2 left-2 p-0.5 rounded-full border-2 ${group.hasUnseen && !isMe ? 'border-blue-500' : 'border-white'} z-10 bg-transparent`}>
+                 <div className={`absolute top-2 left-2 p-0.5 rounded-full border-2 ${group.hasUnseen ? 'border-blue-500' : 'border-white'} z-10 bg-transparent`}>
                      <Avatar name={displayName} src={displayAvatar ? (displayAvatar.startsWith('http') ? displayAvatar : getMediaUrl(displayAvatar)) : null} className="w-8 h-8 rounded-full border border-white" textClassName="text-[10px]" />
                  </div>
                  <span className="absolute bottom-2 right-2 text-white font-bold text-[10px] shadow-black drop-shadow-md z-10 truncate max-w-[90%] text-right leading-tight">
-                    {isMe ? t('your_story') : displayName}
+                    {displayName}
                  </span>
               </div>
              );
@@ -480,10 +654,9 @@ const Stories: React.FC<StoriesProps> = ({ onCreateStory, refreshKey }) => {
         </div>
       </div>
 
-      {viewerOpen && currentStory && createPortal(
+      {viewerOpen && currentStory && currentGroup && createPortal(
           <div className="fixed inset-0 z-[200] bg-black flex flex-col animate-in fade-in duration-200">
              
-             {/* Progress Bars - INCREASED Z-INDEX TO 100 */}
              <div className="absolute top-0 left-0 right-0 z-[100] pt-safe px-2 py-3 flex gap-1 pointer-events-none">
                 {currentGroup.stories.map((s, i) => {
                     let width = '0%';
@@ -497,7 +670,6 @@ const Stories: React.FC<StoriesProps> = ({ onCreateStory, refreshKey }) => {
                 })}
              </div>
 
-             {/* Header Info - INCREASED Z-INDEX TO 100 */}
              <div className="absolute top-8 left-0 right-0 z-[100] px-4 flex items-center justify-between mt-2">
                 <div className="flex items-center gap-3">
                    <Avatar name={currentGroup.user.name} src={currentGroup.user.avatar ? (currentGroup.user.avatar.startsWith('http') ? currentGroup.user.avatar : getMediaUrl(currentGroup.user.avatar)) : null} className="w-9 h-9 border border-white/20" />
@@ -514,15 +686,9 @@ const Stories: React.FC<StoriesProps> = ({ onCreateStory, refreshKey }) => {
                 </div>
              </div>
              
-             {/* Content Area - Z-index Logic Applied Here */}
              <div className="flex-1 relative bg-black flex items-center justify-center">
-                 {/* 
-                    SOLID BLACK CURTAIN (Overlay) - KEPT AT z-50
-                    This hides the video flash/glitch.
-                    Since UI is z-[100], UI will stay visible on top of this curtain.
-                    ADDED pointer-events-none so users can click 'Next/Prev' even while buffering.
-                 */}
-                 {(!isVideoPlaying || isBuffering) && (
+                 {/* Only show loader if we explicitly need to buffer and video isn't visible yet */}
+                 {isBuffering && !isVideoVisible && (
                      <div className="absolute inset-0 z-50 flex items-center justify-center bg-black pointer-events-none">
                          <Loader2 size={48} className="text-white animate-spin" />
                      </div>
@@ -533,40 +699,37 @@ const Stories: React.FC<StoriesProps> = ({ onCreateStory, refreshKey }) => {
                          <p className="text-white text-2xl font-bold text-center leading-relaxed whitespace-pre-wrap">{currentStory.text}</p>
                      </div>
                  ) : (
-                     currentStory.media?.type === 'video' ? (
+                     (currentStory.media?.type === 'video' || (typeof currentStory.media?.type === 'string' && currentStory.media.type.includes('video'))) ? (
                         <div className="relative w-full h-full bg-black">
                            <video 
-                              key={currentStory._id} // CRITICAL: Force remount to clear player state
+                              key={currentStory._id} 
                               ref={videoRef}
-                              src={getMediaUrl(currentStory.media.url)}
+                              src={getMediaUrl(currentStory.media!.url)}
                               autoPlay={!isPaused} 
                               playsInline
-                              // Hide video completely if not playing yet to avoid flash of poster/black frame
-                              className="w-full h-full object-contain"
+                              // Hide video until we seeked to correct start time to prevent flash
+                              className={`w-full h-full object-contain transition-opacity duration-200 ${isVideoVisible ? 'opacity-100' : 'opacity-0'}`}
                               controls={false}
                               disablePictureInPicture
                               controlsList="nodownload nofullscreen noremoteplayback"
+                              // No Loop - handle end manually for next story
                               onTimeUpdate={onVideoTimeUpdate}
+                              onLoadedMetadata={onVideoLoadedMetadata}
                               onEnded={onVideoEnded}
                               onWaiting={onVideoWaiting}
-                              onPlaying={onVideoPlaying}
+                              onPlaying={onVideoPlay}
                            />
                         </div>
                      ) : (
                         <img src={getMediaUrl(currentStory.media?.url)} alt="story" className="w-full h-full object-contain" />
                      )
                  )}
-                 {/* Click Zones for Navigation - z-10 is fine (below curtain) because clicks bubble up? No, needs to be clickable. 
-                     Wait, if curtain is z-50, z-10 nav won't work during buffer. That's fine.
-                     But when playing, curtain is gone, z-10 works. 
-                 */}
                  <div className="absolute inset-0 z-10 flex">
                      <div className="w-1/3 h-full" onClick={handlePrev}></div>
                      <div className="w-2/3 h-full" onClick={handleNext}></div>
                  </div>
              </div>
              
-             {/* Footer Controls - INCREASED Z-INDEX TO 100 */}
              {currentGroup.isUser && (
                 <div className="absolute bottom-4 left-0 right-0 z-[100] flex justify-center pb-safe">
                     <button onClick={handleShowViewers} className="flex items-center gap-2 bg-black/40 backdrop-blur-md px-4 py-2 rounded-full text-white hover:bg-black/60 transition-colors">
@@ -593,7 +756,7 @@ const Stories: React.FC<StoriesProps> = ({ onCreateStory, refreshKey }) => {
         </div>,
         document.body
       )}
-
+      
       {isViewersModalOpen && createPortal(
         <div className="fixed inset-0 z-[300] flex items-end justify-center">
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setIsViewersModalOpen(false); setIsPaused(false); }} />
