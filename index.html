@@ -232,6 +232,31 @@
   
       </div>
     </div>
+    
+    <script type="module">
+      import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+      import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js';
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyD08yfFqO32HBSU9SLxFx2UuPvkVdEhMWY",
+        authDomain: "mihnty-e94ca.firebaseapp.com",
+        projectId: "mihnty-e94ca",
+        storageBucket: "mihnty-e94ca.firebasestorage.app",
+        messagingSenderId: "123005243140",
+        appId: "1:123005243140:web:7ba255ae7bcb25ccd58a51",
+        measurementId: "G-E0QRH2YWPC"
+      };
+
+      const app = initializeApp(firebaseConfig );
+      const messaging = getMessaging(app);
+
+      window.firebaseMessaging = messaging;
+      window.getFirebaseToken = getToken;
+      window.onFirebaseMessage = onMessage;
+
+      console.log('✅ Firebase initialized via CDN');
+    </script>
+    
     <script type="module" src="/index.tsx"></script>
   </body>
 </html>

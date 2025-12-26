@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { 
-  Briefcase, Users, ChevronLeft, X, ArrowRight, MapPin, Loader2, Megaphone
+  Briefcase, Users, ChevronLeft, X, ArrowRight, MapPin, Loader2, Megaphone, Bell
 } from 'lucide-react';
 import PostCard from './PostCard';
 import { Post } from '../types';
@@ -39,6 +39,56 @@ const JobsView: React.FC<JobsViewProps> = ({ onFullScreenToggle, currentLocation
     setActiveSubPage(null);
     onFullScreenToggle(false);
     setPosts([]);
+  };
+
+  const handleSubscribeJobs = async () => {
+    try {
+      // 1. Request Browser Permission
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        alert('يرجى السماح بالإشعارات من إعدادات المتصفح لتلقي تنبيهات الوظائف');
+        return;
+      }
+      
+      // 2. Get Token
+      const fcmToken = localStorage.getItem('fcmToken');
+      const authToken = localStorage.getItem('token');
+      
+      if (!fcmToken) {
+        alert('جارٍ تهيئة نظام الإشعارات، يرجى المحاولة بعد قليل');
+        return;
+      }
+      
+      if (!authToken) {
+        alert('يرجى تسجيل الدخول أولاً لتفعيل التنبيهات');
+        return;
+      }
+      
+      // 3. Send Subscription to Backend
+      // Assuming backend endpoint /api/v1/fcm/subscribe handles topic subscription
+      const response = await fetch(`${API_BASE_URL}/api/v1/fcm/subscribe`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify({
+          deviceToken: fcmToken,
+          topic: 'jobs', // Topic for all jobs
+          subTopic: activeSubPage ? activeSubPage.type : 'all' // Optional: refined subscription
+        })
+      });
+      
+      if (response.ok) {
+        alert('✅ تم تفعيل إشعارات الوظائف بنجاح! ستصلك تنبيهات عند توفر وظائف جديدة.');
+      } else {
+        // Fallback for demo if API isn't ready, generally we show success or handle specific error
+        alert('حدث خطأ أثناء تفعيل الإشعارات، يرجى المحاولة مرة أخرى.');
+      }
+    } catch (error) {
+      console.error('Subscription error:', error);
+      alert('حدث خطأ في الاتصال');
+    }
   };
 
   const getLocationLabel = () => {
@@ -210,15 +260,26 @@ const JobsView: React.FC<JobsViewProps> = ({ onFullScreenToggle, currentLocation
                 </div>
               </div>
 
-              <button 
-                onClick={onLocationClick}
-                className="flex items-center gap-1.5 bg-gray-50 hover:bg-gray-100 py-1.5 px-3 rounded-full transition-colors border border-gray-100"
-              >
-                <MapPin size={14} className="text-purple-600" />
-                <span className="text-[10px] font-bold text-gray-700 truncate max-w-[100px]">
-                  {getLocationLabel()}
-                </span>
-              </button>
+              <div className="flex items-center gap-2">
+                {/* --- BELL ICON INSIDE SUB-PAGE --- */}
+                <button 
+                  onClick={handleSubscribeJobs}
+                  className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-purple-600 dark:text-purple-400"
+                  title="تفعيل إشعارات هذا القسم"
+                >
+                  <Bell size={20} strokeWidth={2} />
+                </button>
+
+                <button 
+                  onClick={onLocationClick}
+                  className="flex items-center gap-1.5 bg-gray-50 hover:bg-gray-100 py-1.5 px-3 rounded-full transition-colors border border-gray-100"
+                >
+                  <MapPin size={14} className="text-purple-600" />
+                  <span className="text-[10px] font-bold text-gray-700 truncate max-w-[100px]">
+                    {getLocationLabel()}
+                  </span>
+                </button>
+              </div>
             </div>
         </div>
 
@@ -268,15 +329,26 @@ const JobsView: React.FC<JobsViewProps> = ({ onFullScreenToggle, currentLocation
              </div>
            </div>
            
-           <button 
-              onClick={onLocationClick}
-              className="flex items-center gap-1.5 bg-white/80 dark:bg-gray-800 hover:bg-white dark:hover:bg-gray-700 py-1.5 px-3 rounded-full transition-colors border border-gray-100 dark:border-gray-700 shadow-sm"
-            >
-              <MapPin size={14} className="text-purple-600 dark:text-purple-400" />
-              <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300 truncate max-w-[100px]">
-                {getLocationLabel()}
-              </span>
-           </button>
+           <div className="flex items-center gap-2">
+             {/* --- BELL ICON IN MAIN JOBS HEADER --- */}
+             <button 
+               onClick={handleSubscribeJobs}
+               className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400"
+               title="تفعيل إشعارات الوظائف"
+             >
+               <Bell size={20} strokeWidth={2} />
+             </button>
+
+             <button 
+                onClick={onLocationClick}
+                className="flex items-center gap-1.5 bg-white/80 dark:bg-gray-800 hover:bg-white dark:hover:bg-gray-700 py-1.5 px-3 rounded-full transition-colors border border-gray-100 dark:border-gray-700 shadow-sm"
+              >
+                <MapPin size={14} className="text-purple-600 dark:text-purple-400" />
+                <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300 truncate max-w-[100px]">
+                  {getLocationLabel()}
+                </span>
+             </button>
+           </div>
         </div>
       </div>
 

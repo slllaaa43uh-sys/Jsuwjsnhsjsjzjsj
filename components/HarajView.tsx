@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  ArrowRight, ChevronLeft, Store, MapPin, Loader2, Megaphone
+  ArrowRight, ChevronLeft, Store, MapPin, Loader2, Megaphone, Bell
 } from 'lucide-react';
 import PostCard from './PostCard';
 import { Post } from '../types';
@@ -34,6 +34,51 @@ const HarajView: React.FC<HarajViewProps> = ({ onFullScreenToggle, currentLocati
     setActiveCategory(null);
     onFullScreenToggle(false);
     setPosts([]);
+  };
+
+  const handleSubscribeHaraj = async () => {
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        alert('يرجى السماح بالإشعارات من إعدادات المتصفح لتلقي تنبيهات الحراج');
+        return;
+      }
+      
+      const fcmToken = localStorage.getItem('fcmToken');
+      const authToken = localStorage.getItem('token');
+      
+      if (!fcmToken) {
+        alert('جارٍ تهيئة نظام الإشعارات، يرجى المحاولة بعد قليل');
+        return;
+      }
+      
+      if (!authToken) {
+        alert('يرجى تسجيل الدخول أولاً لتفعيل التنبيهات');
+        return;
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/api/v1/fcm/subscribe`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify({
+          deviceToken: fcmToken,
+          topic: 'haraj',
+          subTopic: activeCategory || 'all'
+        })
+      });
+      
+      if (response.ok) {
+        alert('✅ تم تفعيل إشعارات الحراج بنجاح! ستصلك تنبيهات عند توفر عروض جديدة.');
+      } else {
+        alert('حدث خطأ أثناء تفعيل الإشعارات، يرجى المحاولة مرة أخرى.');
+      }
+    } catch (error) {
+      console.error('Subscription error:', error);
+      alert('حدث خطأ في الاتصال');
+    }
   };
 
   const getLocationLabel = () => {
@@ -189,15 +234,26 @@ const HarajView: React.FC<HarajViewProps> = ({ onFullScreenToggle, currentLocati
               </div>
             </div>
 
-            <button 
-              onClick={onLocationClick}
-              className="flex items-center gap-1.5 bg-gray-50 hover:bg-gray-100 py-1.5 px-3 rounded-full transition-colors border border-gray-100"
-            >
-              <MapPin size={14} className="text-orange-600" />
-              <span className="text-[10px] font-bold text-gray-700 truncate max-w-[100px]">
-                {getLocationLabel()}
-              </span>
-            </button>
+            <div className="flex items-center gap-2">
+              {/* --- BELL ICON IN SUB-PAGE --- */}
+              <button 
+                onClick={handleSubscribeHaraj}
+                className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-orange-600 dark:text-orange-400"
+                title="تفعيل إشعارات هذا القسم"
+              >
+                <Bell size={20} strokeWidth={2} />
+              </button>
+
+              <button 
+                onClick={onLocationClick}
+                className="flex items-center gap-1.5 bg-gray-50 hover:bg-gray-100 py-1.5 px-3 rounded-full transition-colors border border-gray-100"
+              >
+                <MapPin size={14} className="text-orange-600" />
+                <span className="text-[10px] font-bold text-gray-700 truncate max-w-[100px]">
+                  {getLocationLabel()}
+                </span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -252,15 +308,26 @@ const HarajView: React.FC<HarajViewProps> = ({ onFullScreenToggle, currentLocati
              </div>
            </div>
            
-           <button 
-              onClick={onLocationClick}
-              className="flex items-center gap-1.5 bg-white/80 dark:bg-gray-800 hover:bg-white dark:hover:bg-gray-700 py-1.5 px-3 rounded-full transition-colors border border-gray-100 dark:border-gray-700 shadow-sm"
-            >
-              <MapPin size={14} className="text-orange-600 dark:text-orange-400" />
-              <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300 truncate max-w-[100px]">
-                {getLocationLabel()}
-              </span>
-           </button>
+           <div className="flex items-center gap-2">
+             {/* --- BELL ICON IN MAIN HARAJ HEADER --- */}
+             <button 
+               onClick={handleSubscribeHaraj}
+               className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400"
+               title="تفعيل إشعارات الحراج"
+             >
+               <Bell size={20} strokeWidth={2} />
+             </button>
+
+             <button 
+                onClick={onLocationClick}
+                className="flex items-center gap-1.5 bg-white/80 dark:bg-gray-800 hover:bg-white dark:hover:bg-gray-700 py-1.5 px-3 rounded-full transition-colors border border-gray-100 dark:border-gray-700 shadow-sm"
+              >
+                <MapPin size={14} className="text-orange-600 dark:text-orange-400" />
+                <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300 truncate max-w-[100px]">
+                  {getLocationLabel()}
+                </span>
+             </button>
+           </div>
         </div>
       </div>
 

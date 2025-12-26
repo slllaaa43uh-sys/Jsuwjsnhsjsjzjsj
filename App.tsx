@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import Header from './components/Header';
 import CreatePostBar from './components/CreatePostBar';
@@ -78,6 +79,47 @@ const AppContent: React.FC = () => {
       }
     }
   }, [token, showSplash]);
+
+  useEffect(() => {
+    const initFirebaseNotifications = async () => {
+      if (!token) return;
+      
+      try {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+          const messaging = (window as any).firebaseMessaging;
+          const getToken = (window as any).getFirebaseToken;
+          const onMessage = (window as any).onFirebaseMessage;
+          
+          if (messaging && getToken) {
+            const fcmToken = await getToken(messaging, {
+              vapidKey: 'BKsTw8qpWfiNulXC_NsqZhwhIXOfeUs65sYLiyCb8fpsY'
+            });
+            
+            if (fcmToken) {
+              localStorage.setItem('fcmToken', fcmToken);
+              console.log('✅ FCM Token saved');
+            }
+            
+            if (onMessage) {
+              onMessage(messaging, (payload: any) => {
+                if (payload.notification) {
+                  new Notification(payload.notification.title || 'إشعار جديد', {
+                    body: payload.notification.body,
+                    icon: '/logo.png'
+                  });
+                }
+              });
+            }
+          }
+        }
+      } catch (error) {
+        console.error('خطأ في Firebase:', error);
+      }
+    };
+    
+    setTimeout(initFirebaseNotifications, 1000);
+  }, [token]);
 
   // --- Notification Polling Logic ---
   useEffect(() => {
