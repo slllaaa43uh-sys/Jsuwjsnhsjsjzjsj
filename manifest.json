@@ -2,7 +2,7 @@
   "name": "مهنتي لي",
   "short_name": "مهنتي",
   "description": "منصة تواصل اجتماعي مهنية ووظائف وحراج",
-  "start_url": ".",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
@@ -11,12 +11,14 @@
     {
       "src": "https://cdn-icons-png.flaticon.com/512/3281/3281329.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "https://cdn-icons-png.flaticon.com/512/3281/3281329.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }

@@ -1,5 +1,5 @@
-
 import React, { useState, useEffect, useRef } from 'react';
+import { messaging, getToken, onMessage } from './firebase-init';
 import Header from './components/Header';
 import CreatePostBar from './components/CreatePostBar';
 import Stories from './components/Stories';
@@ -87,13 +87,9 @@ const AppContent: React.FC = () => {
       try {
         const permission = await Notification.requestPermission();
         if (permission === 'granted') {
-          const messaging = (window as any).firebaseMessaging;
-          const getToken = (window as any).getFirebaseToken;
-          const onMessage = (window as any).onFirebaseMessage;
-          
           if (messaging && getToken) {
             const fcmToken = await getToken(messaging, {
-              vapidKey: 'BKsTw8qpWfiNulXC_NsqZhwhIXOfeUs65sYLiyCb8fpsY'
+              vapidKey: (import.meta as any).env.VITE_FIREBASE_VAPID_KEY
             });
             
             if (fcmToken) {
